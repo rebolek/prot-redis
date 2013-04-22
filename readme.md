@@ -67,4 +67,49 @@ DELETE - delete key or member in key or whole database
 	
 ## Series! actions
 
-Not yet implemented.
+Series action allows accessing redis database like normal Rebol block. 
+It's possible to access Redis' datatypes directly from rebol, so you can APPEND to lists or sets.
+All function use standard rebol 1-based indexing and protocol automaticaly converts indexes to zero based.
+
+
+###OPEN
+
+Open port and return it.
+
+	redis-port: open redis://192.168.1.1/foo
+
+###SELECT
+
+Select KEY and return it's value. Key stays selected for further operations (APPEND, CLEAR etc)
+
+	select redis-port 'list-key
+
+###PICK
+
+Return KEY's value. Does not select key.
+
+	pick redis-port 'key
+
+###POKE
+
+If KEY is valid key name, set it's value. If KEY is integer and list key is already selected, set value in that list key.
+
+	poke redis-port 'name "Boleslav"
+	select redis-port 'colours
+	poke redis-port 1 "Blue"
+
+###CLEAR
+
+If the key is list, remove all elements
+
+	select redis-port 'colours
+	clear redis-port
+
+###APPEND
+
+If key is list, append value to end and return list.
+
+	select redis-port 'colours
+	append redis-port "Green"
+	
+###INSERT

@@ -1,0 +1,27 @@
+
+%/c/code/r3/_project/redis/prot-redis/tests/core-tests.r
+
+[delete redis://192.168.1.25] "succeeded"
+[write redis://192.168.1.25 [SET 'key1 "value1"]] "succeeded"
+["value1" = to string! write redis://192.168.1.25 [GET 'key1]] "succeeded"
+[port? redis-port: open redis://192.168.1.25] "succeeded"
+[poke redis-port 'name "Redis"] "succeeded"
+["Redis" = to string! pick redis-port 'name] "succeeded"
+["Redis" = to string! select redis-port 'name] "succeeded"
+[port? close redis-port] "succeeded"
+[port? redis-port: open redis://192.168.1.25] "succeeded"
+[none? select redis-port 'set1] "succeeded"
+[empty? clear redis-port] "succeeded"
+[block? append redis-port "item1"] "succeeded"
+["item1" = to string! pick redis-port 1] "succeeded"
+[port? close redis-port] "succeeded"
+
+system/version: 2.101.0.3.1
+interpreter-checksum: #{C86904B3E42763BDA6CED9A33041EE75EE600089}
+test-checksum: #{C584DC0DC15B9C55437DAB4B0F0C9E9F63D809E3}
+Total: 14
+Succeeded: 14
+Test-failures: 0
+Crashes: 0
+Dialect-failures: 0
+Skipped: 0
