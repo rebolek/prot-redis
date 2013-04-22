@@ -121,4 +121,10 @@ If key is list, insert value at the head of the list.
 
 ####string
 
+Return length of value.
+
+	>> poke redis-port 'name "Boleslav"
+	>> length? redis-port
+	== 8
+
 ####list

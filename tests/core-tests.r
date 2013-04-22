@@ -6,6 +6,7 @@
 ; series access function
 ; STRING
 [port? redis-port: open redis://192.168.1.25]
+[open? redis-port]
 [poke redis-port 'name "Redis"]
 ["Redis" = to string! pick redis-port 'name]
 ["Redis" = to string! select redis-port 'name]
@@ -25,6 +26,11 @@
 [2 = insert redis-port "Hello"]
 ["Hello" = to string! pick redis-port 1]
 [2 = length? redis-port]
+
+[4 = poke redis-port 'band ["John" "Paul" "George" "Pete"]]
+[poke redis-port 4 "Ringo"]
+["Ringo" = to string! pick redis-port 4]
+
 [port? close redis-port]
 
 ; HASH

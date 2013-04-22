@@ -357,7 +357,7 @@ sys/make-scheme [
 		open?: func [
 			redis-port [port!]
 		] [
-			redis-port/state
+			true? redis-port/state
         ]
 		
 		open: func [
@@ -524,7 +524,13 @@ sys/make-scheme [
 			key: get-key redis-port 
 			unless key [make-redis-error "No key selected, SELECT key first."]
 			send-redis-cmd redis-port reduce ['LPUSH key value]
-]
+		]
+		
+		remove: funct [
+			redis-port [port!]
+		][
+		
+		]
 		
 		find: func [
 			redis-port 
@@ -539,8 +545,29 @@ sys/make-scheme [
 			key 
 			value 
 		][
-			send-redis-cmd redis-port reduce ['SET key value]
-			true 
+			unless integer? key [
+				redis-port/spec/path: join #"/" key 
+				redis-port/state/key: key 
+			]
+			type: redis-type? redis-port  
+			cmd: case [
+				all [
+					equal? type 'none
+					block? value 
+				][
+					compose [RPUSH key (value)]
+				]
+				equal? type 'none [
+					[SET key value]
+				]
+				all [
+					equal? type 'list
+					integer? key 
+				][
+					compose [LSET redis-port/state/key (key - 1) value]
+				]
+			]
+			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
 		
 		pick: funct [
@@ -556,21 +583,21 @@ sys/make-scheme [
 			]
 			cmd: reduce/only case [
 				equal? type 'none									[ [] ]
-				equal? type 'string									[ [ GET key ] ]
+				equal? type 'string									[ [GET key] ]
 				all [
 					equal? type 'list 
 					integer? key 
 				][ 
 					redis-port/state/index: key - 1
 					key: get-key redis-port 
-					[ LINDEX key redis-port/state/index] 
+					[LINDEX key redis-port/state/index] 
 				]
 				equal? type 'list 									[ [LRANGE key 0 -1] ]
-				hash-body: all [ equal? type 'hash single? path ]	[ [ HGETALL key ] ]
-				equal? type 'set									[ [ SMEMBERS key ] ]
-				equal? type 'hash									[ [ HGET key path/2 ] ]
-				all [ equal? type 'zset single? path ]				[ [ ZCARD key ] ]
-				zset-value: equal? type 'zset						[ [ ZSCORE key path/2 ] ]
+				hash-body: all [ equal? type 'hash single? path ]	[ [HGETALL key] ]
+				equal? type 'set									[ [SMEMBERS key] ]
+				equal? type 'hash									[ [HGET key path/2] ]
+				all [ equal? type 'zset single? path ]				[ [ZCARD key] ]
+				zset-value: equal? type 'zset						[ [ZSCORE key path/2] ]
 			] redis-commands 
 			either empty? cmd [none][
 				send-redis-cmd redis-port cmd
