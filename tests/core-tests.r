@@ -11,6 +11,8 @@
 ["Redis" = to string! select redis-port 'name]
 ['string = redis-type? redis-port]
 [5 = length? redis-port]
+[10 = append redis-port "Rebol"]
+["RedisRebol" = to string! pick redis-port 'name]
 [port? close redis-port]
 
 ; LIST 

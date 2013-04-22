@@ -10,6 +10,8 @@
 ["Redis" = to string! select redis-port 'name] "succeeded"
 ['string = redis-type? redis-port] "succeeded"
 [5 = length? redis-port] "succeeded"
+[10 = append redis-port "Rebol"] "succeeded"
+["RedisRebol" = to string! pick redis-port 'name] "succeeded"
 [port? close redis-port] "succeeded"
 [port? redis-port: open redis://192.168.1.25] "succeeded"
 [none? select redis-port 'set1] "succeeded"
@@ -24,9 +26,9 @@
 
 system/version: 2.101.0.3.1
 interpreter-checksum: #{C86904B3E42763BDA6CED9A33041EE75EE600089}
-test-checksum: #{0609C2CA3356C4F0399675A3E24033C3B8518D95}
-Total: 20
-Succeeded: 20
+test-checksum: #{3A7CEE19399B48F4475739706DA63BDF05A3710F}
+Total: 22
+Succeeded: 22
 Test-failures: 0
 Crashes: 0
 Dialect-failures: 0

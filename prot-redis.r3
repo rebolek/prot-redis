@@ -270,7 +270,9 @@ send-redis-cmd: func [
 	redis-port	[port!]
 	data		[block!]	"Data to send. Words and paths are evaluated."
 ][
+;	print ["Send-redis-cmd:" data]
 	sync-write redis-port make-bulk-request data 
+;	probe 
 	parse-response redis-port/state/tcp-port/spec/redis-data
 ]
 
@@ -487,7 +489,7 @@ sys/make-scheme [
 				equal? type 'zset	[ [ ZREM key second path ] ]
 				true				[ [ DEL key ] ]
 			]
-			send-redis-cmd redis-port request 
+			send-redis-cmd redis-port reduce/only request redis-commands 
 		]
 		
 		close: func [
@@ -505,8 +507,13 @@ sys/make-scheme [
 			; TODO: check for type?
 			key: get-key redis-port 
 			unless key [make-redis-error "No key selected, SELECT key first."]
-			send-redis-cmd redis-port reduce ['RPUSH key value]
-;			send-redis-cmd redis-port reduce ['LRANGE key 0 -1]
+			type: redis-type? redis-port 
+			cmd: case [
+				equal? type 'none		[[RPUSH key value]]
+				equal? type 'string		[[APPEND key value]]
+				equal? type 'list		[[RPUSH key value]]
+			]
+			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
 		
 		insert: funct [
