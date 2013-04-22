@@ -359,6 +359,7 @@ sys/make-scheme [
 			redis-port/state: context [
 				tcp-port: none 
 				key: get-key redis-port 
+				index: none 
 			]
 			redis-port/state/tcp-port: tcp-port: make port! [
 				scheme: 'tcp
@@ -497,8 +498,18 @@ sys/make-scheme [
 			key: get-key redis-port 
 			unless key [make-redis-error "No key selected, SELECT key first."]
 			send-redis-cmd redis-port reduce ['RPUSH key value]
-			send-redis-cmd redis-port reduce ['LRANGE key 0 -1]
+;			send-redis-cmd redis-port reduce ['LRANGE key 0 -1]
 		]
+		
+		insert: funct [
+			redis-port [port!]
+			value 
+		][
+			; TODO: check for type?
+			key: get-key redis-port 
+			unless key [make-redis-error "No key selected, SELECT key first."]
+			send-redis-cmd redis-port reduce ['LPUSH key value]
+]
 		
 		find: func [
 			redis-port 
@@ -535,9 +546,9 @@ sys/make-scheme [
 					equal? type 'list 
 					integer? key 
 				][ 
-					index: key 
+					redis-port/state/index: key - 1
 					key: get-key redis-port 
-					compose [ LINDEX key (index - 1)] 
+					[ LINDEX key redis-port/state/index] 
 				]
 				equal? type 'list 									[ [LRANGE key 0 -1] ]
 				hash-body: all [ equal? type 'hash single? path ]	[ [ HGETALL key ] ]
