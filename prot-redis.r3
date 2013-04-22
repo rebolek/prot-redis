@@ -270,9 +270,9 @@ send-redis-cmd: func [
 	redis-port	[port!]
 	data		[block!]	"Data to send. Words and paths are evaluated."
 ][
-;	print ["Send-redis-cmd:" data]
+	print ["Send-redis-cmd:" data]
 	sync-write redis-port make-bulk-request data 
-;	probe 
+	probe 
 	parse-response redis-port/state/tcp-port/spec/redis-data
 ]
 
@@ -439,7 +439,6 @@ sys/make-scheme [
 						parse-response redis-port/state/tcp-port/spec/redis-data
 					]
 				]
-				
 			]		
 		]	
 
@@ -555,31 +554,36 @@ sys/make-scheme [
 					equal? type 'none
 					block? value 
 				][
-					compose [RPUSH key (value)]
+					compose [RPUSH (key) (value)]
+				]
+				all [
+					equal? type 'none
+					any [object? value map? value]
+				][
+					 compose [HMSET (key) (flat-body-of value)]
 				]
 				equal? type 'none [
-					[SET key value]
+					reduce ['SET key value]
 				]
 				all [
 					equal? type 'list
 					integer? key 
 				][
-					compose [LSET redis-port/state/key (key - 1) value]
+					compose [LSET (redis-port/state/key) (key - 1) (value)]
 				]
 			]
-			send-redis-cmd redis-port reduce/only cmd redis-commands 
+			send-redis-cmd redis-port cmd 
 		]
 		
 		pick: funct [
 			redis-port 
 			key 
 		][
-			type: either integer? key [
-				; index in LIST...
+			type: either redis-port/state/key [
 				redis-type? redis-port 
 			][
-				; KEY
 				redis-type?/key redis-port key 
+				
 			]
 			cmd: reduce/only case [
 				equal? type 'none									[ [] ]
@@ -593,15 +597,13 @@ sys/make-scheme [
 					[LINDEX key redis-port/state/index] 
 				]
 				equal? type 'list 									[ [LRANGE key 0 -1] ]
-				hash-body: all [ equal? type 'hash single? path ]	[ [HGETALL key] ]
+;				hash-body: all [ equal? type 'hash single? path ]	[ [HGETALL key] ]
 				equal? type 'set									[ [SMEMBERS key] ]
-				equal? type 'hash									[ [HGET key path/2] ]
+				equal? type 'hash									[ [HGET redis-port/state/key key] ]
 				all [ equal? type 'zset single? path ]				[ [ZCARD key] ]
-				zset-value: equal? type 'zset						[ [ZSCORE key path/2] ]
+				zset-value: equal? type 'zset						[ [ZSCORE redis-port/state/key key] ]
 			] redis-commands 
-			either empty? cmd [none][
-				send-redis-cmd redis-port cmd
-			]
+			either empty? cmd [none][send-redis-cmd redis-port cmd]
 		]
 		
 		select: funct [
@@ -637,7 +639,7 @@ sys/make-scheme [
 			] 
 		]
 		
-		length? funct [
+		length?: funct [
 			redis-port 
 		][
 			key: redis-port/state/key

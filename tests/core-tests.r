@@ -14,11 +14,11 @@
 [5 = length? redis-port]
 [10 = append redis-port "Rebol"]
 ["RedisRebol" = to string! pick redis-port 'name]
-[port? close redis-port]
+
 
 ; LIST 
 [port? redis-port: open redis://192.168.1.25]
-[none? select redis-port 'set1]
+[none? select redis-port 'list]
 [empty? clear redis-port]
 [1 = append redis-port "World"]
 ["World" = to string! pick redis-port 1]
@@ -31,6 +31,19 @@
 [poke redis-port 4 "Ringo"]
 ["Ringo" = to string! pick redis-port 4]
 
-[port? close redis-port]
 
 ; HASH
+
+[poke redis-port 'obj1 object [name: "Gabriela" hair: 'brown]]
+["Gabriela" = to string! pick redis-port 'name]
+
+; SET
+
+; SORTED SET
+
+; PUB/SUB
+
+
+; CLOSE PORT
+
+[port? close redis-port]
