@@ -116,3 +116,9 @@ If key is list, append value to end and return list.
 
 If key is list, insert value at the head of the list. 
 **NOTE:** Redis cannot insert into list at index position, so `INSERT` is implemented as `RPUSH key value`.
+
+###LENGTH?
+
+####string
+
+####list

@@ -274,6 +274,14 @@ send-redis-cmd: func [
 	parse-response redis-port/state/tcp-port/spec/redis-data
 ]
 
+do-redis: func [
+	"Open Redis port, send all commands in data block and close port."
+	redis-port	[port!]
+	data		[block!]	"Redis commands to proceed"
+][
+	; TODO
+]
+
 parse-read-request: funct [
 	redis-port 
 ][
@@ -576,9 +584,39 @@ sys/make-scheme [
 			"Clear selected key"
 			redis-port 
 		][
-			send-redis-cmd redis-port reduce ['LTRIM key 0 0]
-			send-redis-cmd redis-port reduce ['LPOP key]
-			[]
+			key: redis-port/state/key
+			type: redis-type? redis-port 
+			ret: case [
+				equal? type 'none	[[]]
+				equal? type 'string [
+					send-redis-cmd redis-port reduce ['SET key ""]
+					""
+				]
+				equal? type 'list	[
+					send-redis-cmd redis-port reduce ['LTRIM key 0 0]
+					send-redis-cmd redis-port reduce ['LPOP key]
+					[]
+				]
+				equal? type 'hash	[[]]
+				equal? type 'set	[[]]
+				equal? type 'zset	[[]]
+			] 
 		]
+		
+		length? funct [
+			redis-port 
+		][
+			key: redis-port/state/key
+			type: redis-type? redis-port 
+			cmd: reduce/only case [
+				equal? type 'none	[[]]
+				equal? type 'string [[STRLEN key]]
+				equal? type 'list	[[LLEN key]]
+				equal? type 'hash	[[HLEN key]]
+				equal? type 'set	[[]]
+				equal? type 'zset	[[]]
+			] redis-commands 
+			either empty? cmd [none][send-redis-cmd redis-port cmd]
+		] 
 	]
 ]

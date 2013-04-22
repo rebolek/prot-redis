@@ -1,0 +1,33 @@
+
+%/c/code/r3/_project/redis/prot-redis/tests/core-tests.r
+
+[delete redis://192.168.1.25] "succeeded"
+[write redis://192.168.1.25 [SET 'key1 "value1"]] "succeeded"
+["value1" = to string! write redis://192.168.1.25 [GET 'key1]] "succeeded"
+[port? redis-port: open redis://192.168.1.25] "succeeded"
+[poke redis-port 'name "Redis"] "succeeded"
+["Redis" = to string! pick redis-port 'name] "succeeded"
+["Redis" = to string! select redis-port 'name] "succeeded"
+['string = redis-type? redis-port] "succeeded"
+[5 = length? redis-port] "succeeded"
+[port? close redis-port] "succeeded"
+[port? redis-port: open redis://192.168.1.25] "succeeded"
+[none? select redis-port 'set1] "succeeded"
+[empty? clear redis-port] "succeeded"
+[1 = append redis-port "World"] "succeeded"
+["World" = to string! pick redis-port 1] "succeeded"
+['list = redis-type? redis-port] "succeeded"
+[2 = insert redis-port "Hello"] "succeeded"
+["Hello" = to string! pick redis-port 1] "succeeded"
+[2 = length? redis-port] "succeeded"
+[port? close redis-port] "succeeded"
+
+system/version: 2.101.0.3.1
+interpreter-checksum: #{C86904B3E42763BDA6CED9A33041EE75EE600089}
+test-checksum: #{0609C2CA3356C4F0399675A3E24033C3B8518D95}
+Total: 20
+Succeeded: 20
+Test-failures: 0
+Crashes: 0
+Dialect-failures: 0
+Skipped: 0
