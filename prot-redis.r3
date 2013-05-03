@@ -270,9 +270,9 @@ send-redis-cmd: func [
 	redis-port	[port!]
 	data		[block!]	"Data to send. Words and paths are evaluated."
 ][
-	print ["Send-redis-cmd:" data]
+;	print ["Send-redis-cmd:" data]
 	sync-write redis-port make-bulk-request data 
-	probe 
+;	probe 
 	parse-response redis-port/state/tcp-port/spec/redis-data
 ]
 
@@ -301,30 +301,7 @@ parse-read-request: funct [
 		all [ equal? type 'zset single? path ]				[ [ ZCARD key ] ]
 		zset-value: equal? type 'zset						[ [ ZSCORE key path/2 ] ]
 	]
-]		
-
-parse-write-request: funct [ 
-	redis-port	[port!]
-	value		[block!]
-][
-;	if path: get-path redis-port [ key: first path ]
-	key: get-key redis-port 
-	type: redis-type? redis-port
-	case [
-		all [ not path block? value ]	[ value ]											; VALUE is Redis code
-		block? value 					[ compose [ RPUSH (key) (value) ] ]					; VALUE is block! and will be stored as LIST
-		all [
-			index: attempt [ to integer! second path ]
-			equal? type 'list 
-		] [
-			reduce [ 'LSET key index value ] 
-		]
-		equal? type 'hash				[ compose [ HSET key (second path value) ] ]		; VALUE is field's value in hash
-		equal? type 'zset				[ compose [ ZADD key (value second path) ] ]
-		object? value 					[ compose [ HMSET key (flat-body-of value) ] ]		; VALUE is object! and will be stored as HASH -- THIS DOESN'T WORK BECAUSE OF WRITE
-		true 							[ [ SET key value ] ] 								; VALUE will be stored as STRING (default action)
-	]			
-]
+]	
 
 sync-write: func [
 	"Synchronous write to Redis port"
@@ -332,9 +309,7 @@ sync-write: func [
 	data 
     /local tcp-port 
 ] [
-	unless open? redis-port [
-		open redis-port 
-	]
+	unless open? redis-port [open redis-port]
 	tcp-port: redis-port/state/tcp-port
 	tcp-port/awake: :awake-handler
 	either tcp-port/spec/port-state = 'ready [
@@ -395,19 +370,22 @@ sys/make-scheme [
 		][
 			key: get-key redis-port 
 			type: redis-type? redis-port 
-			hash-body: zset-value: none 
-			response: send-redis-cmd redis-port parse-read-request redis-port 
-			case [
-				hash-body [ 
-					map collect [
-						foreach [key value] response [
-							keep reduce [to word! to string! key to string! value]
-						]
-					]
-				]
-				zset-value [ either response [ to integer! to string! response ][ response ] ]
-				true [response]
-			]
+			ret: pick redis-port key 
+			close redis-port 
+			ret 
+;			hash-body: zset-value: none 
+;			response: send-redis-cmd redis-port parse-read-request redis-port 
+;			case [
+;				hash-body [ 
+;					map collect [
+;						foreach [key value] response [
+;							keep reduce [to word! to string! key to string! value]
+;						]
+;					]
+;				]
+;				zset-value [ either response [ to integer! to string! response ][ response ] ]
+;				true [response]
+;			]
 		]
 		
 		write: funct [
@@ -426,19 +404,23 @@ sys/make-scheme [
 				redis-port 
 			] [
 			;  --- SYNCHRONOUS OPERATION
-;				print "SYNC"
-				switch type?/word value [
+;				print ["SYNC:" value]
+				ret: switch type?/word value [
 					block! [
 						send-redis-cmd redis-port value 
 					]
 					string! [
-						; NOT IMPLEMENTED
+						key: get-key redis-port 
+;						poke redis-port key value 	
+						send-redis-cmd redis-port reduce ['SET key value]
 					]
 					binary! [
 						sync-write redis-port value ; RAW data, no need for bulk request
 						parse-response redis-port/state/tcp-port/spec/redis-data
 					]
 				]
+				close redis-port 
+				ret 
 			]		
 		]	
 
@@ -548,7 +530,7 @@ sys/make-scheme [
 				redis-port/spec/path: join #"/" key 
 				redis-port/state/key: key 
 			]
-			type: redis-type? redis-port  
+			type: redis-type? redis-port 
 			cmd: case [
 				all [
 					equal? type 'none
@@ -563,6 +545,9 @@ sys/make-scheme [
 					 compose [HMSET (key) (flat-body-of value)]
 				]
 				equal? type 'none [
+					reduce ['SET key value]
+				]
+				equal? type 'string [
 					reduce ['SET key value]
 				]
 				all [

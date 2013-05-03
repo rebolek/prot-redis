@@ -1,9 +1,21 @@
-; block! - dialect
+; DELETE (FLUSH ALL, so DB is empty for testing)
 [delete redis://192.168.1.25]
-[write redis://192.168.1.25 [SET 'key1 "value1"]]
-["value1" = to string! write redis://192.168.1.25 [GET 'key1]]
 
+; STRING - dialect
+[write redis://192.168.1.25 [SET key1 "value1"]]
+["value1" = to string! write redis://192.168.1.25 [GET key1]]
+; STRING - direct access
+[write redis://192.168.1.25/key1 "value2"]
+["value2" = to string! read redis://192.168.1.25/key1]
+
+; LIST - dialect
+[3 = write redis://192.168.1.25 [RPUSH list1 "red" "green" "blue"]]
+[3 = length? read redis://192.168.1.25/list1]
+
+;;-----------------------
 ; series access function
+;;-----------------------
+
 ; STRING
 [port? redis-port: open redis://192.168.1.25]
 [open? redis-port]
