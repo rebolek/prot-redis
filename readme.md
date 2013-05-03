@@ -44,16 +44,16 @@ Read works will all Redis type. See table for returned values:
 		string -> returns value as binary!
 		list -> returns length of a list
 		hash -> returns hash as map!
-		set -> returns all memebers in set as block!
+		set -> returns all members in set as block!
 		zset -> returns length of sorted set
 		
 	
 ###QUERY - return informations about key
 
-;	query redis://192.168.1.1		-- TODO: will send INFO command
+	query redis://192.168.1.1
 	query redis://192.168.1.1/foo
 	
-Returns informations about key. Format is object!
+Returns informations about key as object!
 
 	name -> key name
 	size -> key size (length of string or number of members)
@@ -62,6 +62,7 @@ Returns informations about key. Format is object!
 
 DELETE - delete key or member in key or whole database
 
+	delete redis://192.168.1.1
 	delete redis://192.168.1.1/foo
 	
 ## Series! actions

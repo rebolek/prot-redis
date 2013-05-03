@@ -405,16 +405,23 @@ sys/make-scheme [
 			] [
 			;  --- SYNCHRONOUS OPERATION
 ;				print ["SYNC:" value]
-				ret: switch type?/word value [
-					block! [
+				print ["write key:" get-key redis-port "value:" value]
+				key: get-key redis-port 
+				ret: case [
+					all [key block? value][
+						send-redis-cmd redis-port compose ['RPUSH (key) (value)]
+					]
+					block? value [
 						send-redis-cmd redis-port value 
 					]
-					string! [
-						key: get-key redis-port 
-;						poke redis-port key value 	
+					all [key string? value][
 						send-redis-cmd redis-port reduce ['SET key value]
 					]
-					binary! [
+					string? value [
+;						poke redis-port key value 						
+						sync-write redis-port value ; RAW data, no need for bulk request
+					]
+					binary? value [
 						sync-write redis-port value ; RAW data, no need for bulk request
 						parse-response redis-port/state/tcp-port/spec/redis-data
 					]

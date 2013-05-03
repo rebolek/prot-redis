@@ -11,6 +11,8 @@
 ; LIST - dialect
 [3 = write redis://192.168.1.25 [RPUSH list1 "red" "green" "blue"]]
 [3 = length? read redis://192.168.1.25/list1]
+[3 = write redis://192.168.1.25/list2 ["red" "green" "blue"]]
+[3 = length? read redis://192.168.1.25/list2]
 
 ;;-----------------------
 ; series access function
