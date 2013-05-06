@@ -434,13 +434,12 @@ sys/make-scheme [
 		query: func [
 ;TODO: Add |FIELDS refinement
 			redis-port [port!]
-			/local path key response 
+			/local key response 
 		][
-;			if path: get-path redis-port [ key: first path ]
 			key: get-key redis-port 
 			type: redis-type? redis-port 
 			case [
-				none? path [ parse-server-info send-redis-cmd redis-port [ INFO ] ]	; TODO: query DB. What should it return? INFO?
+				none? key [ parse-server-info send-redis-cmd redis-port [ INFO ] ]	; TODO: query DB. What should it return? INFO?
 				true [
 					reduce/no-set [
 						name: key 
@@ -449,7 +448,7 @@ sys/make-scheme [
 							either integer? response [ response ][ length? response ]
 						)	
 						date: (
-							response: send-redis-cmd redis-port [ TTL key ]
+							response: send-redis-cmd redis-port reduce [ 'TTL key ]
 							switch/default response [
 								-1 [ none ]
 							][
@@ -458,7 +457,7 @@ sys/make-scheme [
 								local 
 							]
 						)
-						type: ( to lit-word! send-redis-cmd redis-port [ TYPE key ] )
+						type: ( to lit-word! send-redis-cmd redis-port reduce [ 'TYPE key ] )
 					]
 				]
 			]

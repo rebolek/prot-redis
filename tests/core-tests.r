@@ -7,12 +7,20 @@
 ; STRING - direct access
 [write redis://192.168.1.25/key1 "value2"]
 ["value2" = to string! read redis://192.168.1.25/key1]
+['string = select query redis://192.168.1.25/key1 'type]
 
 ; LIST - dialect
 [3 = write redis://192.168.1.25 [RPUSH list1 "red" "green" "blue"]]
 [3 = length? read redis://192.168.1.25/list1]
+; LIST - direct access
 [3 = write redis://192.168.1.25/list2 ["red" "green" "blue"]]
 [3 = length? read redis://192.168.1.25/list2]
+['list = select query redis://192.168.1.25/list2 'type]
+
+; HASH - dialect
+[write redis://192.168.1.25 [HMSET hash1 name "Frodo" race "hobbit"]]
+; HASH - direct access
+['hash = select query redis://192.168.1.25/hash1 'type]
 
 ;;-----------------------
 ; series access function
