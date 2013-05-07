@@ -5,10 +5,10 @@ Redis scheme for Rebol3
 	
 # Introduction
 
-This script provides Redis scheme for Rebol3. (Redis)[http://www.redis.io] is key/value (NoSQL) database.
-Rebol3 is newest version of (Rebol)[http://www.rebol.com] programming language.
+This script provides Redis scheme for Rebol3. [Redis](http://www.redis.io) is key/value (NoSQL) database.
+Rebol3 is newest version of [Rebol](http://www.rebol.com) programming language.
 This script implements Redis as standard Rebol protocol that can be accessed using redis://redis-server notation.
-This script uses (Ladislav's test framework)[https://github.com/rebolsource/rebol-test].
+This script uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test).
 
 ## Direct control
 
@@ -64,7 +64,57 @@ DELETE - delete key or member in key or whole database
 
 	delete redis://192.168.1.1
 	delete redis://192.168.1.1/foo
-	
+
+### Port! actions table
+
+
+<table border="1">
+	<th>
+		<td><code>string</code></td>
+		<td><code>list</code></td>
+		<td><code>hash</code></td>
+		<td><code>set</code></td>
+		<td><code>sorted set</code></td>
+		<td><code>pub/sub</code></td>
+	</th>
+	<tr>
+		<td><code>READ</code></td>
+		<td><strong>binary!</strong></td>
+		<td><strong>block!</strong></td>
+		<td><strong>map!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>WRITE</code></td>
+		<td><strong>logic!</strong></td>
+		<td>length as <strong>integer!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>QUERY</code></td>
+		<td><strong>object!</strong></td>
+		<td><strong>object!</strong></td>
+		<td><strong>object!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>DELETE</code></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+</table>
+
 ## Series! actions
 
 Series action allows accessing redis database like normal Rebol block. 
