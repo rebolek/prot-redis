@@ -576,6 +576,7 @@ sys/make-scheme [
 				redis-type?/key redis-port key 
 				
 			]
+			hash?: false 
 			cmd: reduce/only case [
 				equal? type 'none									[ [] ]
 				equal? type 'string									[ [GET key] ]
@@ -588,13 +589,15 @@ sys/make-scheme [
 					[LINDEX key redis-port/state/index] 
 				]
 				equal? type 'list 									[ [LRANGE key 0 -1] ]
-;				hash-body: all [ equal? type 'hash single? path ]	[ [HGETALL key] ]
 				equal? type 'set									[ [SMEMBERS key] ]
+				all [equal? type 'hash equal? key redis-port/state/key]	[hash?: true [HGETALL key] ] 
 				equal? type 'hash									[ [HGET redis-port/state/key key] ]
-				all [ equal? type 'zset single? path ]				[ [ZCARD key] ]
-				zset-value: equal? type 'zset						[ [ZSCORE redis-port/state/key key] ]
+;				all [ equal? type 'zset single? path ]				[ [ZCARD key] ]
+;				zset-value: equal? type 'zset						[ [ZSCORE redis-port/state/key key] ]
 			] redis-commands 
-			either empty? cmd [none][send-redis-cmd redis-port cmd]
+			ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
+			if hash? [ret: map block-string ret]
+			ret 
 		]
 		
 		select: funct [

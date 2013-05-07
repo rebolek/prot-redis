@@ -19,6 +19,7 @@
 
 ; HASH - dialect
 [write redis://192.168.1.25 [HMSET hash1 name "Frodo" race "hobbit"]]
+[equal? (map ["name" "Frodo" "race" "hobbit"]) read redis://192.168.1.25/hash1]
 ; HASH - direct access
 ['hash = select query redis://192.168.1.25/hash1 'type]
 
