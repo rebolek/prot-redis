@@ -42,10 +42,10 @@ You can also use WRITE to set members in other types than string.
 Read works will all Redis type. See table for returned values:
 
 		string -> returns value as binary!
-		list -> returns length of a list
-		hash -> returns hash as map!
-		set -> returns all members in set as block!
-		zset -> returns length of sorted set
+		list   -> returns length of a list
+		hash   -> returns hash as map!
+		set    -> returns all members in set as block!
+		zset   -> returns length of sorted set
 		
 	
 ###QUERY - return informations about key
@@ -66,7 +66,6 @@ DELETE - delete key or member in key or whole database
 	delete redis://192.168.1.1/foo
 
 ### Port! actions table
-
 
 <table border="1">
 	<th>
@@ -117,9 +116,9 @@ DELETE - delete key or member in key or whole database
 
 ## Series! actions
 
-Series action allows accessing redis database like normal Rebol block. 
-It's possible to access Redis' datatypes directly from rebol, so you can APPEND to lists or sets.
-All function use standard rebol 1-based indexing and protocol automaticaly converts indexes to zero based.
+Series action allows accessing Redis database like normal Rebol block. 
+It is possible to access Redis' datatypes directly from Rebol, so you can APPEND to lists or sets.
+All function use standard Rebol 1-based indexing and protocol automaticaly converts indexes to zero based.
 
 **NOTE:** Because Redis database is different from Rebol block, 
 some commands have slightly different meaning and may return different values than help string suggests!
@@ -133,7 +132,7 @@ Open port and return it.
 
 ###SELECT
 
-Select KEY and return it's value. Key stays selected for further operations (APPEND, CLEAR etc)
+Select KEY and return its value. Key stays selected for further operations (APPEND, CLEAR etc)
 
 	select redis-port 'list-key
 
@@ -157,21 +156,28 @@ If KEY is valid key name, set it's value. If KEY is integer and list key is alre
 
 ###CLEAR
 
-If the key is list, remove all elements
+####list
+
+Remove all elements.
 
 	select redis-port 'colours
 	clear redis-port
 
 ###APPEND
 
-If key is list, append value to end and return list.
+####list
+
+Append value to end and return list.
 
 	select redis-port 'colours
 	append redis-port "Green"
 	
 ###INSERT
 
-If key is list, insert value at the head of the list. 
+####list
+
+Insert value at the head of the list. 
+
 **NOTE:** Redis cannot insert into list at index position, so `INSERT` is implemented as `RPUSH key value`.
 
 ###LENGTH?
