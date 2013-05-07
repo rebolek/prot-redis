@@ -5,6 +5,7 @@
 [write redis://192.168.1.25 [SET key1 "value1"]]
 ["value1" = to string! write redis://192.168.1.25 [GET key1]]
 ; STRING - direct access
+[delete redis://192.168.1.25/key1]
 [write redis://192.168.1.25/key1 "value2"]
 ["value2" = to string! read redis://192.168.1.25/key1]
 ['string = select query redis://192.168.1.25/key1 'type]
@@ -13,6 +14,7 @@
 [3 = write redis://192.168.1.25 [RPUSH list1 "red" "green" "blue"]]
 [3 = length? read redis://192.168.1.25/list1]
 ; LIST - direct access
+[delete redis://192.168.1.25/list1]
 [3 = write redis://192.168.1.25/list2 ["red" "green" "blue"]]
 [3 = length? read redis://192.168.1.25/list2]
 ['list = select query redis://192.168.1.25/list2 'type]
@@ -21,6 +23,9 @@
 [write redis://192.168.1.25 [HMSET hash1 name "Frodo" race "hobbit"]]
 [equal? (map ["name" "Frodo" "race" "hobbit"]) read redis://192.168.1.25/hash1]
 ; HASH - direct access
+['hash = select query redis://192.168.1.25/hash1 'type]
+[delete redis://192.168.1.25/hash1]
+[write redis://192.168.1.25/hash1 map [name "Frodo" race "hobbit"]]
 ['hash = select query redis://192.168.1.25/hash1 'type]
 
 ;;-----------------------
