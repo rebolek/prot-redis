@@ -1,39 +1,51 @@
 ; DELETE (FLUSH ALL, so DB is empty for testing)
-[delete redis://192.168.1.25]
+; NOTE: define your redis server (rs) address here:
+[delete rs: redis://192.168.1.25]
 
 ; STRING - dialect
-[write redis://192.168.1.25 [SET key1 "value1"]]
-["value1" = to string! write redis://192.168.1.25 [GET key1]]
+[write rs [SET key1 "value1"]]
+["value1" = to string! write rs [GET key1]]
 ; STRING - direct access
-[delete redis://192.168.1.25/key1]
-[write redis://192.168.1.25/key1 "value2"]
-["value2" = to string! read redis://192.168.1.25/key1]
-['string = select query redis://192.168.1.25/key1 'type]
+[1 = delete rs/key1]
+[write rs/key1 "value2"]
+["value2" = to string! read rs/key1]
+['string = select query rs/key1 'type]
 
 ; LIST - dialect
-[3 = write redis://192.168.1.25 [RPUSH list1 "red" "green" "blue"]]
-[3 = length? read redis://192.168.1.25/list1]
+[3 = write rs [RPUSH list1 "red" "green" "blue"]]
+[3 = length? read rs/list1]
 ; LIST - direct access
-[delete redis://192.168.1.25/list1]
-[3 = write redis://192.168.1.25/list2 ["red" "green" "blue"]]
-[3 = length? read redis://192.168.1.25/list2]
-['list = select query redis://192.168.1.25/list2 'type]
+;[1 = delete rs/list1/1]
+[1 = delete rs/list1]
+[3 = write rs/list2 ["red" "green" "blue"]]
+[3 = length? read rs/list2]
+['list = select query rs/list2 'type]
 
 ; HASH - dialect
-[write redis://192.168.1.25 [HMSET hash1 name "Frodo" race "hobbit"]]
-[equal? (map ["name" "Frodo" "race" "hobbit"]) read redis://192.168.1.25/hash1]
+[write rs [HMSET hash1 name "Frodo" race "hobbit"]]
+[equal? (map ["name" "Frodo" "race" "hobbit"]) read rs/hash1]
 ; HASH - direct access
-['hash = select query redis://192.168.1.25/hash1 'type]
-[delete redis://192.168.1.25/hash1]
-[write redis://192.168.1.25/hash1 map [name "Frodo" race "hobbit"]]
-['hash = select query redis://192.168.1.25/hash1 'type]
+['hash = select query rs/hash1 'type]
+[1 = delete rs/hash1]
+; [write rs/hash1 map [name "Frodo" race "hobbit"]] ; -- impossible with current WRITE limitations
+
+
+;;-----------------------
+; port actions
+;;-----------------------
+
+[
+	write rs/wrongkey "some data"
+	rename rs/wrongkey rs/goodkey
+	"some data" = to string! read rs/goodkey
+]
 
 ;;-----------------------
 ; series access function
 ;;-----------------------
 
 ; STRING
-[port? redis-port: open redis://192.168.1.25]
+[port? redis-port: open rs]
 [open? redis-port]
 [poke redis-port 'name "Redis"]
 ["Redis" = to string! pick redis-port 'name]
@@ -45,7 +57,7 @@
 
 
 ; LIST 
-[port? redis-port: open redis://192.168.1.25]
+[port? redis-port: open rs]
 [none? select redis-port 'list]
 [empty? clear redis-port]
 [1 = append redis-port "World"]

@@ -25,7 +25,7 @@ You can also use `send-redis-cmd` function
 	
 ## Port! actions
 
-###WRITE - SET key value
+###WRITE
 
 	write redis://192.168.1.1/foo "bar"			; sets key 'foo to "bar" (calls SET foo bar)
 	
@@ -35,7 +35,7 @@ You can also use WRITE to set members in other types than string.
 	write redis://192.168.1.1/hash/field "bar"	; set value of field "field" in key "hash" to "bar"
 	write redis://192.168.1.1/zset/bar 123		; set score of member "bar" in key "zset" to 123
 	
-###READ - GET key
+###READ
 
 	read redis://192.168.1.1/foo			; returns "bar"	(calls GET foo)
 
@@ -60,10 +60,34 @@ Returns informations about key as object!
 	date -> expiration date or none!
 	type -> Redis datatype
 
-DELETE - delete key or member in key or whole database
+###DELETE - delete key or member in key or whole database
 
 	delete redis://192.168.1.1
 	delete redis://192.168.1.1/foo
+
+###RENAME
+
+Rename key. Both arguments are path!
+
+	rename redis://192.168.1.1/old-key redis://192.168.1.1/new-key
+
+###OPEN
+
+Open port and return it.
+
+	redis-port: open redis://192.168.1.1/foo
+
+###OPEN?
+
+Returns `TRUE` when port is open.
+
+###CLOSE
+
+Close port.
+
+###CREATE
+
+###UPDATE
 
 ### Port! actions table
 
@@ -123,12 +147,6 @@ All function use standard Rebol 1-based indexing and protocol automaticaly conve
 **NOTE:** Because Redis database is different from Rebol block, 
 some commands have slightly different meaning and may return different values than help string suggests!
 Please, read the documentation carefully so you are aware of these differencies.
-
-###OPEN
-
-Open port and return it.
-
-	redis-port: open redis://192.168.1.1/foo
 
 ###SELECT
 
@@ -198,3 +216,35 @@ Return number of elements in string.
 	>> poke redis-port ["red" "green" "blue"]
 	>> length? redis-port
 	== 3
+
+###CHANGE
+
+###REMOVE
+
+###COPY
+
+###FIND
+
+###NEXT
+
+###BACK
+
+###AT
+
+###SKIP
+
+###EMPTY?
+
+###HEAD
+
+###HEAD?
+
+###TAIL
+
+###TAIL?
+
+###INDEX?
+
+###MODIFY
+
+###PAST?

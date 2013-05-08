@@ -1,16 +1,15 @@
 REBOL [
     Title: "redis"
     File: %redis.r3
-    Date: 30-Mar-2013
+    Date: 8-5-2013
+	Created: 30-3-2013
     Version: 0.0.1
     Author: "Boleslav Březovský"
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
 		"send-redis-cmd: after lookup convert any-word! to word! (so #key, 'key, key:, key are same key) or not?"
 		"send-redis-cmd should accept Rebol datatypes and convert them for user."
-	
-		"Function that converts port/spec/path to key (currently uses next path)"
-		"Rewrite: WRITE/READ lowlevel, use SERIES funcs instead (PICK for selecting key)"
+		"Is it possible to implement `delete redis://192.168.1.1/list/1` to remove one member?"
 	]
 	History: [
 		"Process return codes"
@@ -363,6 +362,14 @@ sys/make-scheme [
 			open tcp-port 
 			redis-port 
 		]
+
+		close: func [
+			redis-port [port!]
+		][
+			close redis-port/state/tcp-port
+			redis-port/state: none 
+			redis-port 
+		]
 		
 		read: funct [
 			"Read from port (currently SYNC only)"
@@ -373,19 +380,6 @@ sys/make-scheme [
 			ret: pick redis-port key 
 			close redis-port 
 			ret 
-;			hash-body: zset-value: none 
-;			response: send-redis-cmd redis-port parse-read-request redis-port 
-;			case [
-;				hash-body [ 
-;					map collect [
-;						foreach [key value] response [
-;							keep reduce [to word! to string! key to string! value]
-;						]
-;					]
-;				]
-;				zset-value [ either response [ to integer! to string! response ][ response ] ]
-;				true [response]
-;			]
 		]
 		
 		write: funct [
@@ -424,6 +418,9 @@ sys/make-scheme [
 					binary? value [
 						sync-write redis-port value ; RAW data, no need for bulk request
 						parse-response redis-port/state/tcp-port/spec/redis-data
+					]
+					all [key any [map? value object? value]][
+						send-redis-cmd redis-port reduce ['HMSET key value]
 					]
 				]
 				close redis-port 
@@ -478,14 +475,18 @@ sys/make-scheme [
 			]
 			send-redis-cmd redis-port reduce/only request redis-commands 
 		]
-		
-		close: func [
-			redis-port [port!]
+
+		rename: funct [
+			from 
+			to 
 		][
-			close redis-port/state/tcp-port
-			redis-port/state: none 
-			redis-port 
+			redis-port: from 
+			from: last parse/all from/spec/path "/"
+			to: last parse/all to "/"
+			send-redis-cmd redis-port reduce ['RENAME from to]
 		]
+		
+; ===== series! actions
 		
 		append: funct [
 			redis-port [port!]
