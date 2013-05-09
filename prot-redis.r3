@@ -38,7 +38,7 @@ debug: none
 
 flat-body-of: funct [
 	"Change all set-words to words"
-	object [object!]
+	object [object! map!]
 ][
 	parse body: body-of object [
 		some [
@@ -483,6 +483,7 @@ sys/make-scheme [
 				equal? type 'none		[[RPUSH key value]]
 				equal? type 'string		[[APPEND key value]]
 				equal? type 'list		[[RPUSH key value]]
+				equal? type 'hash		[compose [HMSET key (flat-body-of value)]]
 			]
 			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
@@ -494,7 +495,12 @@ sys/make-scheme [
 			; TODO: check for type?
 			key: get-key redis-port 
 			unless key [make-redis-error "No key selected, SELECT key first."]
-			send-redis-cmd redis-port reduce ['LPUSH key value]
+			cmd: case [
+				equal? type 'none		[[LPUSH key value]]
+;				equal? type 'string		[[]]		; --- there's no support in Redis for INSERT on strings
+				equal? type 'list		[[LPUSH key value]]
+			]
+			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
 		
 		remove: funct [
