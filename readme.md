@@ -256,3 +256,71 @@ Return number of elements in string.
 ###MODIFY
 
 ###PAST?
+
+###Series! action table
+
+
+<table border="1">
+	<th>
+		<td><code>string</code></td>
+		<td><code>list</code></td>
+		<td><code>hash</code></td>
+		<td><code>set</code></td>
+		<td><code>sorted set</code></td>
+		<td><code>pub/sub</code></td>
+	</th>
+	<tr>
+		<td><code>SELECT</code></td>
+		<td><strong>binary!</strong></td>
+		<td><strong>block!</strong></td>
+		<td><strong>map!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>PICK</code></td>
+		<td><strong>binary!</strong></td>
+		<td><strong>block!</strong></td>
+		<td><strong>map!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>POKE</code></td>
+		<td><strong>logic!</strong></td>
+		<td>length as <strong>integer!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>CLEAR</code></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>APPEND</code></td>
+		<td>length as <strong>integer!</strong></td>
+		<td>length as <strong>integer!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>INSERT</code></td>
+		<td><strong>N/A</strong></td>
+		<td>length as <strong>integer!</strong></td>
+		<td><strong>logic!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+</table>
