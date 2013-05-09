@@ -1,14 +1,14 @@
 Redis scheme for Rebol3
 
 	Boleslav Březovský
-	31-3-2013
+	9-5-2013
 	
 # Introduction
 
 This script provides Redis scheme for Rebol3. [Redis](http://www.redis.io) is key/value (NoSQL) database.
 Rebol3 is newest version of [Rebol](http://www.rebol.com) programming language.
 This script implements Redis as standard Rebol protocol that can be accessed using redis://redis-server notation.
-This script uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test).
+This script uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test). Prot-redis is released under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 ## Direct control
 
@@ -160,7 +160,7 @@ Please, read the documentation carefully so you are aware of these differencies.
 
 Select KEY and return its value. Key stays selected for further operations (APPEND, CLEAR etc)
 
-	select redis-port 'list-key
+	>> select redis-port 'list-key
 
 This function works same for all Redis datatypes.	
 
@@ -168,7 +168,7 @@ This function works same for all Redis datatypes.
 
 Return KEY's value. Does not select key.
 
-	pick redis-port 'key
+	>> pick redis-port 'key
 
 This function works same for all Redis datatypes.
 	
@@ -176,35 +176,62 @@ This function works same for all Redis datatypes.
 
 If KEY is valid key name, set it's value. If KEY is integer and list key is already selected, set value in that list key.
 
-	poke redis-port 'name "Boleslav"
-	select redis-port 'colours
-	poke redis-port 1 "Blue"
+	>> poke redis-port 'name "Boleslav"
+	>> select redis-port 'colours
+	>> poke redis-port 1 "Blue"
 
 ###CLEAR
+
+####string
+
+Clear the string.
+
+**NOTE:** String is rewritten with empty string.
 
 ####list
 
 Remove all elements.
 
-	select redis-port 'colours
-	clear redis-port
+	>> select redis-port 'colours
+	>> clear redis-port
+
+####hash
+
+Remove all fields and values.
 
 ###APPEND
+
+####string
+
+Append value at the end of the list
+
+	>> poke redis-port 'key "Redis"
+	>> append redis-port "Rebol"
+	>> pick redis-port 'key
+	== "RedisRebol"
 
 ####list
 
 Append value to end and return list.
 
-	select redis-port 'colours
-	append redis-port "Green"
+	>> select redis-port 'colours
+	>> append redis-port "Green"
 	
 ###INSERT
+
+####string
+
+**NOT AVAILABLE:** Redis doesn't support insert for string values. It may be implemented later at protocol level. 
 
 ####list
 
 Insert value at the head of the list. 
 
 **NOTE:** Redis cannot insert into list at index position, so `INSERT` is implemented as `RPUSH key value`.
+
+####hash
+
+**NOT AVAIALBLE**
 
 ###LENGTH?
 
@@ -224,6 +251,15 @@ Return number of elements in string.
 	>> poke redis-port ["red" "green" "blue"]
 	>> length? redis-port
 	== 3
+
+####hash
+
+Return number of fields in hash.
+
+	>> select redis-port 'person
+	>> poke redis-port map [name: "Boleslav" age: 37]
+	>> length? redis-port
+	== 2
 
 ###CHANGE
 
@@ -319,6 +355,15 @@ Return number of elements in string.
 		<td><strong>N/A</strong></td>
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>LENGTH?</code></td>
+		<td>string length as <strong>integer!</strong></td>
+		<td>number of elements as <strong>integer!</strong></td>
+		<td>number of fields as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
