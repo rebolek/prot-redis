@@ -53,29 +53,35 @@ Read works will all Redis type. See table for returned values:
 	query redis://192.168.1.1
 	query redis://192.168.1.1/foo
 	
-Returns informations about key as object!
+Returns informations about key as object!.
 
 	name -> key name
 	size -> key size (length of string or number of members)
 	date -> expiration date or none!
 	type -> Redis datatype
 
-###DELETE - delete key or member in key or whole database
+###DELETE
+
+Delete key or member in key or whole database.
 
 	delete redis://192.168.1.1
+
+Delete whole database (`FLUSHALL`).
+
 	delete redis://192.168.1.1/foo
 
-###RENAME
+Delete one key (`REMOVE`).
 
-Rename key. Both arguments are path!
+	delete redis://192.168.1.1/foo/1
 
-	rename redis://192.168.1.1/old-key redis://192.168.1.1/new-key
+Delete first member in key.
 
 ###OPEN
 
 Open port and return it.
 
 	redis-port: open redis://192.168.1.1/foo
+
 
 ###OPEN?
 
@@ -86,6 +92,8 @@ Returns `TRUE` when port is open.
 Close port.
 
 ###CREATE
+
+###RENAME
 
 ###UPDATE
 

@@ -23,7 +23,7 @@ REBOL [
 		}
 	]
 	Notes: [
-{WRITE:
+{WRITE -
 	WRITE block!	parse dialect and convert all Rebol values to Redis types
 	WRITE string!	direct access (not yet implemented)
 	WRITE binary!	write RAW bulk data
@@ -399,29 +399,12 @@ sys/make-scheme [
 			] [
 			;  --- SYNCHRONOUS OPERATION
 ;				print ["SYNC:" value]
-				print ["write key:" get-key redis-port "value:" value]
 				key: get-key redis-port 
-				ret: case [
-					all [key block? value][
-						send-redis-cmd redis-port compose ['RPUSH (key) (value)]
-					]
-					block? value [
-						send-redis-cmd redis-port value 
-					]
-					all [key string? value][
-						send-redis-cmd redis-port reduce ['SET key value]
-					]
-					string? value [
-;						poke redis-port key value 						
-						sync-write redis-port value ; RAW data, no need for bulk request
-					]
-					binary? value [
-						sync-write redis-port value ; RAW data, no need for bulk request
-						parse-response redis-port/state/tcp-port/spec/redis-data
-					]
-					all [key any [map? value object? value]][
-						send-redis-cmd redis-port reduce ['HMSET key value]
-					]
+				ret: either all [not key block? value][
+					send-redis-cmd redis-port value 
+				][
+					open redis-port 
+					poke redis-port key value 
 				]
 				close redis-port 
 				ret 
