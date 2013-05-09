@@ -29,9 +29,12 @@
 [1 = delete rs/hash1]
 ; [write rs/hash1 map [name "Frodo" race "hobbit"]] ; -- impossible with current WRITE limitations
 
+; SET - dialect
+[3 = write rs [SADD 'set1 "red" "green" "blue"]]
+[equal? ["green" "red" "blue"] block-string read rs/set1]
 
 ;;-----------------------
-; port actions
+; port actions - RENAME
 ;;-----------------------
 
 [
@@ -55,9 +58,19 @@
 [10 = append redis-port "Rebol"]
 ["RedisRebol" = to string! pick redis-port 'name]
 
+; NOTE: INSERT is not supproted in Redis directly. May be implemented later using multiple commands
+; [15 = insert redis-port "Hello"]
+; ["HelloRedisRebol" = to string! pick redis-port 'name]
+
+[
+	close redis-port
+	not open? redis-port
+]
+
 
 ; LIST 
 [port? redis-port: open rs]
+[error? try [append redis-port "no key selected"]]
 [none? select redis-port 'list]
 [empty? clear redis-port]
 [1 = append redis-port "World"]
@@ -76,6 +89,8 @@
 
 [poke redis-port 'obj1 object [name: "Gabriela" hair: 'brown]]
 ["Gabriela" = to string! pick redis-port 'name]
+[append redis-port map ['legs 'long]]
+[3 = length? redis-port]
 
 ; SET
 

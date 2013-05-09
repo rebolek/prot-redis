@@ -113,7 +113,7 @@ Close port.
 		<td><strong>binary!</strong></td>
 		<td><strong>block!</strong></td>
 		<td><strong>map!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>block!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -122,7 +122,7 @@ Close port.
 		<td><strong>logic!</strong></td>
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td>length as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -131,7 +131,7 @@ Close port.
 		<td><strong>object!</strong></td>
 		<td><strong>object!</strong></td>
 		<td><strong>object!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>object!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -140,7 +140,7 @@ Close port.
 		<td><strong>logic!</strong></td>
 		<td><strong>logic!</strong></td>
 		<td><strong>logic!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>logic!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -231,7 +231,7 @@ Insert value at the head of the list.
 
 ####hash
 
-**NOT AVAIALBLE**
+**NOT AVAILABLE**
 
 ###LENGTH?
 
@@ -263,6 +263,12 @@ Return number of fields in hash.
 
 ###CHANGE
 
+####string
+
+Same as `POKE`.
+
+####list
+
 ###REMOVE
 
 ###COPY
@@ -274,6 +280,20 @@ Return number of fields in hash.
 ###BACK
 
 ###AT
+
+Sets `redis-port/state/index` to `index`. This value is used by some functions (`PICK`...). Use `false` to reset index.
+
+####string
+
+**NOT AVAILABLE**
+
+####list
+
+Set position in list.
+
+####hash
+
+**NOTE:** Because `AT` accepts only `integer!`, `logic!` and `pair!`, it's not possible to select field in hash.
 
 ###SKIP
 
