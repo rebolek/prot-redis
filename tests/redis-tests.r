@@ -15,8 +15,8 @@
 [3 = write rs [RPUSH list1 "red" "green" "blue"]]
 [3 = length? read rs/list1]
 ; LIST - direct access
-[1 = write rs/list/1 "yellow"]
-["yellow" = to string! rs/list/1]
+[write rs/list1/1 "yellow"]
+["yellow" = to string! read rs/list1/1]
 ;[1 = delete rs/list1/1]
 [1 = delete rs/list1]
 [3 = write rs/list2 ["red" "green" "blue"]]
@@ -33,7 +33,7 @@
 
 ; SET - dialect
 [3 = write rs [SADD 'set1 "red" "green" "blue"]]
-[equal? ["green" "red" "blue"] block-string read rs/set1]
+[equal? ["blue" "green" "red"] sort block-string read rs/set1] ; SORT needed as it seems that order is not guaranteed
 
 ;;-----------------------
 ; port actions - RENAME

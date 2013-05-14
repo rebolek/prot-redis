@@ -72,6 +72,17 @@ get-key: funct [
 	]
 ]
 
+get-index: funct [
+	"Return index or NONE"
+	redis-port [port!]
+][
+	all [
+		redis-port/spec/path
+		key: second parse next redis-port/spec/path "/"
+		any [attempt [to integer! key] key]
+	]
+]
+
 make-bulk: func [
 	data	[ any-type! ] "Data to bulkize"
 ] [
@@ -300,6 +311,7 @@ sync-write: func [
 	unless port? wait [tcp-port redis-port/spec/timeout] [
 		make-redis-error "redis timeout on tcp-port"
 	]
+	; NOYE: why the port cannot be closed here?
 ]
 
 sys/make-scheme [
@@ -358,7 +370,13 @@ sys/make-scheme [
 		][
 			key: get-key redis-port 
 			type: redis-type? redis-port 
-			ret: pick redis-port key 
+			
+			open redis-port 
+			ret: either index: get-index redis-port [
+				pick redis-port index 
+			][
+				pick redis-port key 
+			]
 			close redis-port 
 			ret 
 		]
@@ -379,15 +397,18 @@ sys/make-scheme [
 				redis-port 
 			] [
 			;  --- SYNCHRONOUS OPERATION
-;				print ["SYNC:" value]
 				key: get-key redis-port 
-				ret: either all [not key block? value][
-					send-redis-cmd redis-port value 
+				either all [not key block? value][
+					ret: send-redis-cmd redis-port value 
 				][
 					open redis-port 
-					poke redis-port key value 
+					ret: either index: get-index redis-port [
+						poke redis-port index value 
+					][
+						poke redis-port key value 
+					]
+					close redis-port 
 				]
-				close redis-port 
 				ret 
 			]		
 		]	
@@ -464,7 +485,7 @@ sys/make-scheme [
 			key: get-key redis-port 
 			unless key [make-redis-error "No key selected, SELECT key first."]
 			type: redis-type? redis-port 
-			cmd: probe case [
+			cmd: case [
 				equal? type 'none		[[RPUSH key value]]
 				equal? type 'string		[[APPEND key value]]
 				equal? type 'list		[[RPUSH key value]]
@@ -502,7 +523,7 @@ sys/make-scheme [
 			true 
 		]
 		
-		poke: func [
+		poke: funct [
 			redis-port 
 			key 
 			value 
@@ -547,7 +568,6 @@ sys/make-scheme [
 			][
 				redis-type?/key redis-port key 				
 			]
-			print ["PICK:" key redis-port/state/key]
 			hash?: false 
 			cmd: reduce/only case [
 				equal? type 'none									[ [] ]
