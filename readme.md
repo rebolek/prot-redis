@@ -8,7 +8,7 @@ Redis scheme for Rebol3
 This script provides Redis scheme for Rebol3. [Redis](http://www.redis.io) is key/value (NoSQL) database.
 Rebol3 is newest version of [Rebol](http://www.rebol.com) programming language.
 This script implements Redis as standard Rebol protocol that can be accessed using redis://redis-server notation.
-This script uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test). Prot-redis is released under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0.html).
+Redis protocol uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test) for unit testing and is released under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 ## Direct control
 
@@ -17,7 +17,7 @@ This script uses [Ladislav's test framework](https://github.com/rebolsource/rebo
 This way you can send raw commands to Redis server. The block is not reduced.
 (Words and path evaluation may be added later.)
 
-You can also use `send-redis-cmd` function
+You can also use `send-redis-cmd` function:
 
 	port: open redis://192.168.1.1
 	send-redis-cmd port [ SET foo "bar" ]
@@ -27,7 +27,11 @@ You can also use `send-redis-cmd` function
 
 ###WRITE
 
-	write redis://192.168.1.1/foo "bar"			; sets key 'foo to "bar" (calls SET foo bar)
+For easy access you can use `WRITE` function.
+
+To set key `foo` to value `bar`:
+
+	write redis://192.168.1.1/foo "bar"
 	
 You can also use WRITE to set members in other types than string.
 
@@ -53,7 +57,7 @@ Read works will all Redis type. See table for returned values:
 	query redis://192.168.1.1
 	query redis://192.168.1.1/foo
 	
-Returns informations about key as object!.
+Return informations about key as object!.
 
 	name -> key name
 	size -> key size (length of string or number of members)
@@ -93,9 +97,15 @@ Close port.
 
 ###CREATE
 
+No information yet.
+
 ###RENAME
 
+No information yet.
+
 ###UPDATE
+
+No information yet.
 
 ### Port! actions table
 
@@ -153,12 +163,12 @@ It is possible to access Redis' datatypes directly from Rebol, so you can APPEND
 All function use standard Rebol 1-based indexing and protocol automaticaly converts indexes to zero based.
 
 **NOTE:** Because Redis database is different from Rebol block, 
-some commands have slightly different meaning and may return different values than help string suggests!
+some commands have slightly different meaning and may return different values than help string suggests.
 Please, read the documentation carefully so you are aware of these differencies.
 
 ###SELECT
 
-Select KEY and return its value. Key stays selected for further operations (APPEND, CLEAR etc)
+Select KEY and return its value. Key stays selected for further operations (`APPEND`, `CLEAR` etc)
 
 	>> select redis-port 'list-key
 
@@ -271,13 +281,23 @@ Same as `POKE`.
 
 ###REMOVE
 
+No information yet.
+
 ###COPY
+
+No information yet.
 
 ###FIND
 
+No information yet.
+
 ###NEXT
 
+No information yet.
+
 ###BACK
+
+No information yet.
 
 ###AT
 
@@ -297,24 +317,41 @@ Set position in list.
 
 ###SKIP
 
+No information yet.
+
 ###EMPTY?
+
+No information yet.
 
 ###HEAD
 
+No information yet.
+
 ###HEAD?
+
+No information yet.
 
 ###TAIL
 
+No information yet.
+
 ###TAIL?
+
+No information yet.
 
 ###INDEX?
 
+No information yet.
+
 ###MODIFY
+
+No information yet.
 
 ###PAST?
 
-###Series! action table
+No information yet.
 
+###Series! action table
 
 <table border="1">
 	<th>
