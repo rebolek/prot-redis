@@ -41,9 +41,9 @@ flat-body-of: funct [
 	object [object! map!]
 ][
 	parse body: body-of object [
-		some [
+		any [
 			change [set key set-word! (key: to word! key)] key 
-		|	any-type!
+		|	skip 
 		]
 	]
 	body 
@@ -54,9 +54,9 @@ block-string: funct [
 	data	[block!]
 ][
 	parse data [
-		some [
+		any [
 			change [set value binary! (value: to string! value)] value 
-		|	any-type!	
+		|	skip 
 		]
 	]
 	data 
