@@ -15,6 +15,8 @@
 [3 = write rs [RPUSH list1 "red" "green" "blue"]]
 [3 = length? read rs/list1]
 ; LIST - direct access
+[1 = write rs/list/1 "yellow"]
+["yellow" = to string! rs/list/1]
 ;[1 = delete rs/list1/1]
 [1 = delete rs/list1]
 [3 = write rs/list2 ["red" "green" "blue"]]
