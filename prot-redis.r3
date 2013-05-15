@@ -482,9 +482,7 @@ sys/make-scheme [
 			redis-port [port!]
 			value 
 		][
-			; TODO: check for type?
-			key: get-key redis-port 
-			unless key [make-redis-error "No key selected, SELECT key first."]
+			unless key: get-key redis-port [make-redis-error "No key selected, SELECT key first."]
 			type: redis-type? redis-port 
 			cmd: case [
 				equal? type 'none		[[RPUSH key value]]
@@ -500,9 +498,8 @@ sys/make-scheme [
 			redis-port [port!]
 			value 
 		][
-			; TODO: check for type?
-			key: get-key redis-port 
-			unless key [make-redis-error "No key selected, SELECT key first."]
+			unless key: get-key redis-port [make-redis-error "No key selected, SELECT key first."]
+			type: redis-type? redis-port 			
 			cmd: case [
 				equal? type 'none		[[LPUSH key value]]
 ;				equal? type 'string		[[]]		; --- there's no support in Redis for INSERT on strings
@@ -516,7 +513,16 @@ sys/make-scheme [
 		remove: funct [
 			redis-port [port!]
 		][
-		
+			unless key: get-key redis-port [make-redis-error "No key selected, SELECT key first."]
+			type: redis-type? redis-port 			
+			cmd: case [
+				equal? type 'none		[]
+;				equal? type 'string		[[]]		; --- there's no support in Redis for INSERT on strings
+				equal? type 'list		[[LPOP key]]
+				equal? type 'hash		[]				
+				equal? type 'set		[[SPOP key]]
+			]
+			send-redis-cmd redis-port reduce/only cmd redis-commands 		
 		]
 		
 		find: func [

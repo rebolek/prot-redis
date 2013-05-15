@@ -92,6 +92,7 @@
 [4 = poke redis-port 'band ["John" "Paul" "George" "Pete"]]
 [poke redis-port 4 "Ringo"]
 ["Ringo" = to string! pick redis-port 4]
+["John" = to string! remove redis-port]
 
 
 ;========
@@ -123,7 +124,6 @@
 [2 = length? redis-port]
 [1 = append redis-port "yellow"]
 [3 = length? redis-port]
-[1 = append redis-port "orange"]
-[4 = length? redis-port]
 [1 = insert redis-port "brown"]
-[5 = length? redis-port]
+[4 = length? redis-port]
+[found? find ["red" "green" "blue" "brown"] to string! remove redis-port]

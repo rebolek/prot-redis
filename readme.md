@@ -281,7 +281,13 @@ Same as `POKE`.
 
 ###REMOVE
 
-No information yet.
+###list
+
+`LPOP:` Remove and get the first element in a list.
+
+####set
+
+`SPOP:` Remove and return a random member from a set.
 
 ###COPY
 
@@ -367,7 +373,7 @@ No information yet.
 		<td><strong>binary!</strong></td>
 		<td><strong>block!</strong></td>
 		<td><strong>map!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>block!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -376,7 +382,7 @@ No information yet.
 		<td><strong>binary!</strong></td>
 		<td><strong>block!</strong></td>
 		<td><strong>map!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>block!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -403,7 +409,7 @@ No information yet.
 		<td>length as <strong>integer!</strong></td>
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td>length as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -412,7 +418,7 @@ No information yet.
 		<td><strong>N/A</strong></td>
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td>length as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -421,7 +427,16 @@ No information yet.
 		<td>string length as <strong>integer!</strong></td>
 		<td>number of elements as <strong>integer!</strong></td>
 		<td>number of fields as <strong>integer!</strong></td>
+		<td>number of elements as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
+		<td><strong>not implemented</strong></td>
+	</tr>
+	<tr>
+		<td><code>REMOVE</code></td>
+		<td><strong>not implemented</strong></td>
+		<td>first member as <strong>binary!</strong></td>
+		<td><strong>not implemented</strong></td>
+		<td>random member as <strong>binary!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
