@@ -107,7 +107,8 @@
 ["Gabriela" = to string! pick redis-port 'name]
 [append redis-port map ['legs 'long]]
 [3 = length? redis-port]
-
+[1 = delete rs/obj1/hair]
+[2 = length? redis-port]
 
 ;=======
 ; SET

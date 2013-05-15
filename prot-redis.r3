@@ -458,6 +458,7 @@ sys/make-scheme [
 			request: case [
 				none? key						[ [ FLUSHALL ] ]
 				all [index equal? type 'list]	[ [ LREM key 1 index ] ]	; TODO: delete redis://server/key/value/count 	???
+				all [index equal? type 'hash]	[ [ HDEL key index ] ]
 				all [index equal? type 'set]	[ [ SREM key index ] ]
 				equal? type 'zset				[ [ ZREM key second path ] ]
 				true							[ [ DEL key ] ]
