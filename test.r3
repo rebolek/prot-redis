@@ -17,7 +17,7 @@ do-redis-tests: has [
 	script-checksum: checksum/method read %prot-redis.r3 'sha1
 
 	print "Testing ..."
-	result: do-recover %tests/redis-tests.r flags script-checksum
+	result: do-recover %redis-tests.r flags script-checksum
 	set [log-file summary] result
 
 	print ["Done, see the log file:" log-file]
