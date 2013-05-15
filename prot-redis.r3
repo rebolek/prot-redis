@@ -453,14 +453,14 @@ sys/make-scheme [
 			redis-port [port!]
 		][
 			key: get-key redis-port 
+			index: get-index redis-port 
 			type: redis-type? redis-port 
 			request: case [
-				none? key			[ [ FLUSHALL ] ]
-				key					[ [ DEL key ] ]
-				equal? type 'list	[ [ LREM key 1 second path ] ]	; TODO: delete redis://server/key/value/count 	???
-				equal? type 'set	[ [ SREM key second path ] ]
-				equal? type 'zset	[ [ ZREM key second path ] ]
-				true				[ [ DEL key ] ]
+				none? key						[ [ FLUSHALL ] ]
+				all [index equal? type 'list]	[ [ LREM key 1 index ] ]	; TODO: delete redis://server/key/value/count 	???
+				all [index equal? type 'set]	[ [ SREM key index ] ]
+				equal? type 'zset				[ [ ZREM key second path ] ]
+				true							[ [ DEL key ] ]
 			]
 			send-redis-cmd redis-port reduce/only request redis-commands 
 		]
@@ -490,6 +490,7 @@ sys/make-scheme [
 				equal? type 'string		[[APPEND key value]]
 				equal? type 'list		[[RPUSH key value]]
 				equal? type 'hash		[compose [HMSET (key) (flat-body-of value)]]
+				equal? type 'set		[[SADD key value]]
 			]
 			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
@@ -554,7 +555,7 @@ sys/make-scheme [
 				][
 					compose [LSET (redis-port/state/key) (key - 1) (value)]
 				]
-				
+				equal? type 'set				[reduce ['SADD key value]]	; FIXME: does not clear previous values
 			]
 			send-redis-cmd redis-port cmd 
 		]
@@ -644,7 +645,7 @@ sys/make-scheme [
 				equal? type 'string [[STRLEN key]]
 				equal? type 'list	[[LLEN key]]
 				equal? type 'hash	[[HLEN key]]
-				equal? type 'set	[[]]
+				equal? type 'set	[[SCARD key]]
 				equal? type 'zset	[[]]
 			] redis-commands 
 			either empty? cmd [none][send-redis-cmd redis-port cmd]
