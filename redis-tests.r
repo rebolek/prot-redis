@@ -109,6 +109,8 @@
 [3 = length? redis-port]
 [1 = delete rs/obj1/hair]
 [2 = length? redis-port]
+[insert redis-port map ['hair 'blond]]
+[3 = length? redis-port]
 
 ;=======
 ; SET
@@ -123,8 +125,5 @@
 [3 = length? redis-port]
 [1 = append redis-port "orange"]
 [4 = length? redis-port]
-
-; TODO: how to implement POKE?
-[4 = write rs [ SADD 'rok "1. jaro" "2. leto" "3. podzim" "4. zima"]] ; TODO: something's wrong with UTF-8
-[equal? ["1. jaro" "2. leto" "3. podzim" "4. zima"] sort block-string select redis-port 'rok]
-
+[1 = insert redis-port "brown"]
+[5 = length? redis-port]
