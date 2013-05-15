@@ -580,7 +580,7 @@ sys/make-scheme [
 			]
 			hash?: false 
 			cmd: reduce/only case [
-				equal? type 'none									[ [] ]
+				equal? type 'none									[ [KEYS '*] ]
 				equal? type 'string									[ [GET key] ]
 				all [
 					equal? type 'list 
@@ -603,8 +603,8 @@ sys/make-scheme [
 					[HGETALL key]
 				]	
 				equal? type 'hash									[ [HGET redis-port/state/key key] ]
-;				all [ equal? type 'zset single? path ]				[ [ZCARD key] ]
-;				zset-value: equal? type 'zset						[ [ZSCORE redis-port/state/key key] ]
+				all [ equal? type 'zset single? path ]				[ [ZCARD key] ]
+				zset-value: equal? type 'zset						[ [ZSCORE redis-port/state/key key] ]
 			] redis-commands 
 			ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
 			if hash? [ret: map block-string ret]

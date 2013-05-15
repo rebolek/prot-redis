@@ -127,3 +127,10 @@
 [1 = insert redis-port "brown"]
 [4 = length? redis-port]
 [found? find ["red" "green" "blue" "brown"] to string! remove redis-port]
+
+
+;============
+; SORTED SET
+;============
+
+[3 = write rs [ZADD 'zset1 100 "Full" 0 "Nothing" 50 "Half"]]
