@@ -126,7 +126,7 @@
 [3 = length? redis-port]
 [1 = insert redis-port "brown"]
 [4 = length? redis-port]
-[found? find ["red" "green" "blue" "brown"] to string! remove redis-port]
+[found? find ["red" "green" "blue" "brown" "yellow"] to string! remove redis-port]
 
 
 ;============

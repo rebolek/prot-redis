@@ -31,6 +31,9 @@ REBOL [
 WRITE block! and binary! ignores path (key) - TODO: should it select database?	
 }	
 	]
+	Bugs: [
+		"read server/non-existent-key returns list of keys instead of none"
+	]
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
 
@@ -103,9 +106,10 @@ make-bulk-request: func [
 ]
 
 parse-response: func [
-	data [binary!]	"Response from Redis server"
+	data [none! binary!]	"Response from Redis server"
 	/local get-response length-rule length bulk-length block result ret 
 ] [
+	unless data [return none]
 	get-response: has [response] [parse to string! next data [copy response to newline] response]
 	length-rule: [
 		copy length to crlf ( 
@@ -580,7 +584,8 @@ sys/make-scheme [
 			]
 			hash?: false 
 			cmd: reduce/only case [
-				equal? type 'none									[ [KEYS '*] ]
+				all [equal? type 'none none? key]					[ [KEYS '*] ]
+				equal? type 'none									[ [] ]
 				equal? type 'string									[ [GET key] ]
 				all [
 					equal? type 'list 
