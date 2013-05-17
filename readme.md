@@ -124,7 +124,7 @@ No information yet.
 		<td><strong>block!</strong></td>
 		<td><strong>map!</strong></td>
 		<td><strong>block!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>block!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 	<tr>
@@ -133,7 +133,7 @@ No information yet.
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
 		<td>length as <strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td>length as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 	<tr>
@@ -142,16 +142,16 @@ No information yet.
 		<td><strong>object!</strong></td>
 		<td><strong>object!</strong></td>
 		<td><strong>object!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>object!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 	<tr>
 		<td><code>DELETE</code></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>integer!</strong></td>
+		<td><strong>integer!</strong></td>
+		<td><strong>integer!</strong></td>
+		<td><strong>integer!</strong></td>
+		<td><strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 </table>
@@ -231,17 +231,23 @@ Append value to end and return list.
 
 ####string
 
-**NOT AVAILABLE:** Redis doesn't support insert for string values. It may be implemented later at protocol level. 
+*NOT AVAILABLE:* Redis doesn't support insert for string values. It may be implemented later at protocol level. 
 
 ####list
 
 Insert value at the head of the list. 
 
-**NOTE:** Redis cannot insert into list at index position, so `INSERT` is implemented as `RPUSH key value`.
+*NOTE:* Redis cannot insert into list at index position, so **INSERT** is implemented as `RPUSH key value`.
 
 ####hash
 
-**NOT AVAILABLE**
+####set
+
+####zset
+
+Add new elements to set. Argument must be block of [score member] pairs. Same as **APPEND**.
+
+*NOT AVAILABLE*
 
 ###LENGTH?
 
@@ -270,6 +276,24 @@ Return number of fields in hash.
 	>> poke redis-port map [name: "Boleslav" age: 37]
 	>> length? redis-port
 	== 2
+
+####set
+
+Return number of elements in set.
+
+	>> write redis-server/beatles ['SADD John George Paul Mary John]
+	>> select redis-port beatles
+	>> length? redis-port
+	== 4
+
+####zset
+
+Return number of elements in sorted set.
+
+	>> write redis-server/score ['ZADD 0 John 0 George 1 Paul 10 Mary]
+	>> select redis-port score
+	>> length? redis-port
+	== 4
 
 ###CHANGE
 
@@ -307,7 +331,7 @@ No information yet.
 
 ###AT
 
-Sets `redis-port/state/index` to `index`. This value is used by some functions (`PICK`...). Use `false` to reset index.
+Sets **redis-port/state/index** to **index** . This value is used by some functions (**PICK** ...). Use **false** to reset index.
 
 ####string
 
@@ -319,11 +343,20 @@ Set position in list.
 
 ####hash
 
-**NOTE:** Because `AT` accepts only `integer!`, `logic!` and `pair!`, it's not possible to select field in hash.
+**NOTE:** Because `AT` accepts only **integer!**, **logic!** and **pair!**, it's not possible to select field in hash.
 
 ###SKIP
 
 No information yet.
+
+###INDEX?
+
+Return **redis-port/state/index**.
+
+	>> select redis-port 'list
+	>> at redis-port 3
+	>> index? redis-port
+	== 2
 
 ###EMPTY?
 
@@ -342,10 +375,6 @@ No information yet.
 No information yet.
 
 ###TAIL?
-
-No information yet.
-
-###INDEX?
 
 No information yet.
 
@@ -374,7 +403,7 @@ No information yet.
 		<td><strong>block!</strong></td>
 		<td><strong>map!</strong></td>
 		<td><strong>block!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>block!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 	<tr>
@@ -383,7 +412,7 @@ No information yet.
 		<td><strong>block!</strong></td>
 		<td><strong>map!</strong></td>
 		<td><strong>block!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>binary!</strong> or <strong>block!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 	<tr>
@@ -391,7 +420,7 @@ No information yet.
 		<td><strong>logic!</strong></td>
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td><strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
@@ -410,7 +439,7 @@ No information yet.
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
 		<td>length as <strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td>number of added elements as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 	<tr>
@@ -419,7 +448,7 @@ No information yet.
 		<td>length as <strong>integer!</strong></td>
 		<td><strong>logic!</strong></td>
 		<td>length as <strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
+		<td>number of added elements as <strong>integer!</strong></td>
 		<td><strong>not implemented</strong></td>
 	</tr>
 	<tr>
