@@ -49,7 +49,7 @@ Read works will all Redis type. See table for returned values:
 		list   -> returns length of a list
 		hash   -> returns hash as map!
 		set    -> returns all members in set as block!
-		zset   -> returns length of sorted set
+		zset   -> returns whole set ordered from lowest to highest score
 		
 	
 ###QUERY - return informations about key

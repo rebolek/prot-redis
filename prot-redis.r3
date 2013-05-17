@@ -464,7 +464,7 @@ sys/make-scheme [
 				all [index equal? type 'list]	[ [ LREM key 1 index ] ]	; TODO: delete redis://server/key/value/count 	???
 				all [index equal? type 'hash]	[ [ HDEL key index ] ]
 				all [index equal? type 'set]	[ [ SREM key index ] ]
-				equal? type 'zset				[ [ ZREM key second path ] ]
+				equal? type 'zset				[ [ ZREM key index ] ]
 				true							[ [ DEL key ] ]
 			]
 			send-redis-cmd redis-port reduce/only request redis-commands 
@@ -608,7 +608,7 @@ sys/make-scheme [
 					[HGETALL key]
 				]	
 				equal? type 'hash									[ [HGET redis-port/state/key key] ]
-				all [ equal? type 'zset single? path ]				[ [ZCARD key] ]
+				equal? type 'zset									[ [ZRANGE key 0 -1] ]
 				zset-value: equal? type 'zset						[ [ZSCORE redis-port/state/key key] ]
 			] redis-commands 
 			ret: either empty? cmd [none][send-redis-cmd redis-port cmd]

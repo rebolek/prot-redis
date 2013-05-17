@@ -134,3 +134,4 @@
 ;============
 
 [3 = write rs [ZADD 'zset1 100 "Full" 0 "Nothing" 50 "Half"]]
+[equal? ["Nothing" "Half" "Full"] block-string read rs/zset]
