@@ -160,3 +160,4 @@
 [1 = insert redis-port [414 "Ceres"]]
 [4 = append redis-port [5910 "Pluto" 6482 "Haumea" 6850 "Makemake" 10123 "Eris"]]
 [4 = length? read rs/zset1/100x500]
+[3 = length? pick redis-port 'zset1/50x200]

@@ -200,7 +200,7 @@ Return KEY's value. Does not select key.
 
 	>> pick redis-port 'key
 
-If index isn't selected (**redis-port/state/index** is **none**), **PICK** calls `GET key`. See table for returned values:
+If **key** argument is **any-word!** or **any-string!**, key is selected using `GET key`:
 
 <table>
 <th><td>Redis type</td><td>Rebol type</td><td>Description</td></th>
@@ -211,7 +211,7 @@ If index isn't selected (**redis-port/state/index** is **none**), **PICK** calls
 <tr><td>5.</td><td>sorted set</td><td><strong>block!</strong></td><td>Whole set ordered from lowest to highest score.</td></tr>
 </table>
 
-If index is selected (for example with **AT** function), **PICK** returns member from set:
+If **key** argument is **path!**, **PICK** returns member from set:
 
 <table>
 <th><td>index datatype</td><td>Redis command</td><td>Returned datatype</td><td>Comment</td></th>
@@ -295,7 +295,19 @@ Append value to end and return list.
 
 	>> select redis-port 'colours
 	>> append redis-port "Green"
-	
+
+####hash
+
+Add new elements to hash. Argument must be block of [field value] pairs.
+
+####set
+
+Add new elements to set.
+
+####sorted set
+
+Add new elements to sorted set. Argument must be block of [score member] pairs.
+
 ###INSERT
 
 ####string
@@ -310,11 +322,15 @@ Insert value at the head of the list.
 
 ####hash
 
+Add new elements to hash. Argument must be block of [field value] pairs. Same as **APPEND**.
+
 ####set
 
-####zset
+Add new elements to set. Same as **APPEND**.
 
-Add new elements to set. Argument must be block of [score member] pairs. Same as **APPEND**.
+####sorted set
+
+Add new elements to sorted set. Argument must be block of [score member] pairs. Same as **APPEND**.
 
 *NOT AVAILABLE*
 
@@ -355,7 +371,7 @@ Return number of elements in set.
 	>> length? redis-port
 	== 4
 
-####zset
+####sorted set
 
 Return number of elements in sorted set.
 
@@ -378,9 +394,13 @@ Same as `POKE`.
 
 `LPOP:` Remove and get the first element in a list.
 
+####hash
+
 ####set
 
 `SPOP:` Remove and return a random member from a set.
+
+####sorted set
 
 ###COPY
 
@@ -400,7 +420,7 @@ No information yet.
 
 ###AT
 
-Sets **redis-port/state/index** to **index** . This value is used by some functions (**PICK** ...). Use **false** to reset index.
+Sets **redis-port/state/index** to **index** . This value is used by series actions that take only port! as argument. Use **false** to reset index.
 
 ####string
 
@@ -413,6 +433,10 @@ Set position in list.
 ####hash
 
 **NOTE:** Because `AT` accepts only **integer!**, **logic!** and **pair!**, it's not possible to select field in hash.
+
+####set
+
+####sorted set
 
 ###SKIP
 
