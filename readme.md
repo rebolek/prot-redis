@@ -217,7 +217,7 @@ If index is selected (for example with **AT** function), **PICK** returns member
 <th><td>index datatype</td><td>Redis command</td><td>Returned datatype</td><td>Comment</td></th>
 <tr><td>list</td><td><strong>integer!</strong></td><td>LINDEX key index</td><td><strong>binary!</strong></td><td></td></tr>
 <tr><td>hash</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>HGET key index</td><td><strong>binary!</strong></td><td></td></tr>
-<tr><td>set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SISMEMBER key member</td><strong>binary!</strong><td><strong>logic!</strong></td><td>Returns <strong>TRUE</strong> if member exists in given set.</td></tr>
+<tr><td>set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SISMEMBER key member</td><td><strong>logic!</strong></td><td>Returns <strong>TRUE</strong> if member exists in given set.</td></tr>
 <tr><td>sorted set</td><td><strong>integer!</strong></td><td>ZRANGEBYSCORE key index index</td><td><strong>block!</strong></td><td></td></tr>
 <tr><td>sorted set</td><td><strong>pair!</strong></td><td>ZRANGEBYSCORE key index/1 index/2</td><td><strong>block!</strong></td><td>Return all members with score in given range</td></tr>
 <tr><td>sorted set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>ZSCORE key member</td><td><strong>integer!</strong></td><td></td></tr>
@@ -226,11 +226,38 @@ If index is selected (for example with **AT** function), **PICK** returns member
 
 ###POKE
 
-If KEY is valid key name, set it's value. If KEY is integer and list key is already selected, set value in that list key.
+**POKE** will store value to a key. If key is **path!**, POKE can set value of members in key. See table below for details.
+
+
 
 	>> poke redis-port 'name "Boleslav"
 	>> select redis-port 'colours
 	>> poke redis-port 1 "Blue"
+
+<table>
+<th><td>index datatype</td><td>value datatype</td><td>Redis command</td><td>Returned datatype</td><td>Comment</td></th>
+
+<tr><td>string</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SET key value</td><td><strong>integer!</strong></td><td></td></tr>
+
+<tr><td>string</td><td><strong>integer!</strong></td><td colspan="4">Not implemented (may be used for bitsets)</td></tr>
+
+<tr><td>list</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td><strong>block!</strong></td><td>SET key value</td><td><strong>integer!</strong></td><td></td></tr>
+
+<tr><td>list</td><td><strong>path!</strong></td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>LSET key index value</td><td><strong>integer!</strong></td><td></td></tr>
+
+<tr><td>hash</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td><strong>map!</strong> | <strong>object!</strong></td><td>HSET key value</td><td><strong>integer!</strong></td><td></td></tr>
+
+<tr><td>hash</td><td><strong>path!</strong></td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>HSET key value</td><td><strong>integer!</strong></td><td></td></tr>
+
+<tr><td>set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td colspan="4">Not implemented</tr>
+
+<tr><td>set</td><td><strong>path!</strong><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SADD key value</td><td><strong>integer!</strong></td><td></td></tr>
+
+<tr><td>sorted set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td colspan="4">Not implemented</tr>
+
+<tr><td>sorted set</td><td><strong>path!</strong></td><td><strong>integer!</strong></td><td>ZADD key value member</td><td><strong>integer!</strong></td><td></td></tr>
+
+</table>
 
 ###CLEAR
 

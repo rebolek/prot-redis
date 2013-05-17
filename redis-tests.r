@@ -26,7 +26,7 @@
 ;OPEN/CLOSE
 ;==========
 
-[port? redis-port: open rs]
+[port? redis-port: rp: open rs]
 [open? redis-port]
 [port? close redis-port] ; ???
 [not open? redis-port]
@@ -83,16 +83,19 @@
 [none? select redis-port 'list]
 [empty? clear redis-port]
 [1 = append redis-port "World"]
-["World" = to string! pick redis-port 1]
+["World" = to string! pick redis-port 'list/1]
 ['list = redis-type? redis-port]
 [2 = insert redis-port "Hello"]
-["Hello" = to string! pick redis-port 1]
+["Hello" = to string! pick redis-port 'list/1]
 [2 = length? redis-port]
 
 [4 = poke redis-port 'band ["John" "Paul" "George" "Pete"]]
-[poke redis-port 4 "Ringo"]
-["Ringo" = to string! pick redis-port 4]
-["John" = to string! remove redis-port]
+[poke redis-port 'band/4 "Ringo"]
+["Ringo" = to string! pick redis-port 'band/4]
+[
+	select redis-port 'band
+	"John" = to string! remove redis-port
+]
 
 
 ;========
@@ -105,13 +108,17 @@
 [1 = delete rs/hash1]
 ; [write rs/hash1 map [name "Frodo" race "hobbit"]] ; -- impossible with current WRITE limitations
 [poke redis-port 'obj1 object [name: "Gabriela" hair: 'brown]]
-[equal? "Gabriela" to string! pick redis-port 'name]
+[equal? "Gabriela" to string! pick redis-port 'obj1/name]
+[equal? "brown" to string! select redis-port 'obj1/hair]
+[1 = poke redis-port 'obj1/eyes "multicolor"]
+[map? select redis-port 'obj1]
+[3 = length? redis-port]
 [append redis-port map ['legs 'long]]
-[3 = length? redis-port]
+[4 = length? redis-port]
 [1 = delete rs/obj1/hair]
-[2 = length? redis-port]
-[insert redis-port map ['hair 'blond]]
 [3 = length? redis-port]
+[insert redis-port map ['hair 'blond]]
+[4 = length? redis-port]
 ;[port? at redis-port 'name]
 ;[equal? "Gabriela" to string! copy redis-port]
 ;[equal? "long" to string! copy at redis-port 'legs]
@@ -131,7 +138,8 @@
 [3 = length? redis-port]
 [1 = insert redis-port "brown"]
 [4 = length? redis-port]
-[pick redis-port "yellow"]
+[block? select redis-port 'set1]
+[pick redis-port 'set1/yellow]
 [found? find ["red" "green" "blue" "brown" "yellow"] to string! remove redis-port]
 
 
@@ -148,7 +156,7 @@
 [9 = length? select redis-port 'zset1]
 [1 = delete rs/zset1/Pluto]
 [8 = length? redis-port]
-[1 = poke redis-port 0 "Slunce"]
+[1 = poke redis-port 'zset1/Slunce 0]
 [1 = insert redis-port [414 "Ceres"]]
 [4 = append redis-port [5910 "Pluto" 6482 "Haumea" 6850 "Makemake" 10123 "Eris"]]
 [4 = length? read rs/zset1/100x500]

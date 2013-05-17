@@ -69,9 +69,15 @@ get-key: funct [
 	"Return selected key or NONE"
 	redis-port [port!]
 ][
-	all [
-		redis-port/spec/path
-		first parse next redis-port/spec/path "/"
+	any [
+		all [
+			redis-port/state
+			redis-port/state/key
+		]
+		all [
+			redis-port/spec/path
+			load next redis-port/spec/path
+		]
 	]
 ]
 
@@ -133,7 +139,7 @@ parse-response: func [
 		#"*" [							; MULTI BULK replies
 			parse/all next data [
 				length-rule (
-					bulk-length: length 
+					bulk-length: length
 					block: make block! length 
 				)
 				bulk-length [
@@ -372,15 +378,10 @@ sys/make-scheme [
 			"Read from port (currently SYNC only)"
 			redis-port [port!]
 		][
-			key: get-key redis-port 
-			type: redis-type? redis-port 
-			
-			open redis-port 
-			ret: either index: get-index redis-port [
-				pick redis-port index 
-			][
-				pick redis-port key 
-			]
+			key: get-key open redis-port 
+;			type: redis-type? redis-port 
+;			open redis-port 
+			ret: pick redis-port key 
 			close redis-port 
 			ret 
 		]
@@ -399,18 +400,14 @@ sys/make-scheme [
 				parse-write-dialect redis-port value 
 				do-request redis-port 
 				redis-port 
-			] [
+			][
 			;  --- SYNCHRONOUS OPERATION
 				key: get-key redis-port 
 				either all [not key block? value][
 					ret: send-redis-cmd redis-port value 
 				][
 					open redis-port 
-					ret: either index: get-index redis-port [
-						poke redis-port index value 
-					][
-						poke redis-port key value 
-					]
+					ret: poke redis-port key value 
 					close redis-port 
 				]
 				ret 
@@ -457,17 +454,21 @@ sys/make-scheme [
 			redis-port [port!]
 		][
 			key: get-key redis-port 
-			index: get-index redis-port 
-			type: redis-type? redis-port 
-			request: case [
+			member: none 
+			if all [path? key 2 = length? key] [
+				member: second key 
+				key: first key 
+			]
+			type: redis-type?/key redis-port key 
+			cmd: case [
 				none? key						[ [ FLUSHALL ] ]
-				all [index equal? type 'list]	[ [ LREM key 1 index ] ]	; TODO: delete redis://server/key/value/count 	???
-				all [index equal? type 'hash]	[ [ HDEL key index ] ]
-				all [index equal? type 'set]	[ [ SREM key index ] ]
-				all [index equal? type 'zset]	[ [ ZREM key index ] ]
+				all [member equal? type 'list]	[ [ LREM key 1 member ] ]	; TODO: delete redis://server/key/value/count 	???
+				all [member equal? type 'hash]	[ [ HDEL key member ] ]
+				all [member equal? type 'set]	[ [ SREM key member ] ]
+				all [member equal? type 'zset]	[ [ ZREM key member ] ]
 				true							[ [ DEL key ] ]
 			]
-			send-redis-cmd redis-port reduce/only request redis-commands 
+			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
 
 		rename: funct [
@@ -492,11 +493,11 @@ sys/make-scheme [
 				equal? type 'none		[[RPUSH key value]]
 				equal? type 'string		[[APPEND key value]]
 				equal? type 'list		[[RPUSH key value]]
-				equal? type 'hash		[compose [HMSET (key) (flat-body-of value)]]
+				equal? type 'hash		[[HMSET key (flat-body-of value)]]
 				equal? type 'set		[[SADD key value]]
-				equal? type 'zset		[compose [ZADD (key) (value)]]
+				equal? type 'zset		[[ZADD key (value)]]
 			]
-			send-redis-cmd redis-port reduce/only cmd redis-commands 
+			send-redis-cmd redis-port compose reduce/only cmd redis-commands 
 		]
 		
 		insert: funct [
@@ -509,11 +510,11 @@ sys/make-scheme [
 				equal? type 'none		[[LPUSH key value]]
 ;				equal? type 'string		[[]]		; --- there's no support in Redis for INSERT on strings
 				equal? type 'list		[[LPUSH key value]]
-				equal? type 'hash		[compose [HMSET (key) (flat-body-of value)]]				
+				equal? type 'hash		[[HMSET key (flat-body-of value)]]				
 				equal? type 'set		[[SADD key value]]
-				equal? type 'zset		[compose [ZADD (key) (value)]]
+				equal? type 'zset		[[ZADD key (value)]]
 			]
-			send-redis-cmd redis-port reduce/only cmd redis-commands 
+			send-redis-cmd redis-port compose reduce/only cmd redis-commands 
 		]
 		
 		remove: funct [
@@ -528,7 +529,7 @@ sys/make-scheme [
 				equal? type 'hash		[]				
 				equal? type 'set		[[SPOP key]]
 			]
-			send-redis-cmd redis-port reduce/only cmd redis-commands 		
+			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
 		
 		find: func [
@@ -541,43 +542,29 @@ sys/make-scheme [
 		
 		poke: funct [
 			redis-port 
-			key 
+			key 		;  [ ANY-WORD! ANY-STRING! PATH! ]
 			value 
 		][
-			unless integer? key [
-				redis-port/spec/path: join #"/" key 
-				redis-port/state/key: key 
+			if all [path? key 2 = length? key] [
+				member: second key 
+				key: first key 
 			]
-			type: redis-type? redis-port 
-			cmd: case [
-				all [
-					equal? type 'none
-					block? value 
-				][
-					compose [RPUSH (key) (value)]
-				]
+			type: redis-type?/key redis-port key 
+			cmd: compose reduce/only case [
+				all [equal? type 'none block? value]			[ [RPUSH key (value)] ]
 				all [
 					equal? type 'none
 					any [object? value map? value]
 				][
-					 compose [HMSET (key) (flat-body-of value)]
+					 [HMSET key (flat-body-of value)]
 				]
-				equal? type 'none 				[reduce ['SET key value]]
-				equal? type 'string 			[reduce ['SET key value]]
-				all [
-					equal? type 'list
-					integer? key 
-				][
-					compose [LSET (redis-port/state/key) (key - 1) (value)]
-				]
-				equal? type 'set				[reduce ['SADD key value]]	; FIXME: does not clear previous values
-				all [
-					equal? type 'zset
-					integer? key 
-				][
-					reduce ['ZADD redis-port/state/key key value]
-				]
-			]
+				equal? type 'none 								[ [SET key value] ]
+				equal? type 'string					 			[ [SET key value] ]
+				all [equal? type 'list integer? member]			[ [LSET key (member - 1) value] ]
+				all [equal? type 'hash member]					[ [HSET key member value] ]
+				equal? type 'set								[ [SADD key value] ]
+				all [equal? type 'zset member]					[ [ZADD key value member] ]
+			] redis-commands 
 			send-redis-cmd redis-port cmd 
 		]
 		
@@ -585,64 +572,26 @@ sys/make-scheme [
 			redis-port 
 			key 
 		][
-			master-key: redis-port/state/key
-			type: either master-key [
-				redis-type? redis-port 
-			][
-				redis-type?/key redis-port key 				
+			member: none 
+			if all [path? key 2 = length? key][
+				member: second key 
+				key: first key 
 			]
+			type: redis-type?/key redis-port key 
 			post: none ; post process code
 			cmd: reduce/only case [
 				all [equal? type 'none none? key]					[ [KEYS '*] ]
 				equal? type 'none									[ [] ]
 				equal? type 'string									[ [GET key] ]
-				all [
-					equal? type 'list 
-					integer? key 
-				][ 
-					redis-port/state/index: key - 1
-					key: get-key redis-port 
-					[LINDEX key redis-port/state/index] 
-				]
+				all [equal? type 'list integer? member]				[ compose [LINDEX key (member - 1)] ]
 				equal? type 'list 									[ [LRANGE key 0 -1] ]
-				all [
-					equal? type 'hash 
-					any [
-						none? master-key 
-						equal? key master-key 
-					]
-				][
-					post: 'hash
-					[HGETALL key]
-				]	
-				equal? type 'hash									[ [HGET master-key key] ]
-				all [
-					equal? type 'set
-					not equal? key master-key 
-				][
-					post: 'set
-					[SISMEMBER master-key key]
-				]
+				all [equal? type 'hash member]						[ [HGET key member] ]	
+				equal? type 'hash									[ post: 'hash [HGETALL key] ]
+				all [equal? type 'set member]						[ post: 'set [SISMEMBER key member] ]
 				equal? type 'set									[ [SMEMBERS key] ]
-				all [
-					equal? type 'zset 
-					integer? key 
-				][
-					[ZRANGEBYSCORE master-key key key] 
-				]
-				all [
-					equal? type 'zset 
-					pair? key 
-				][
-					[ZRANGEBYSCORE master-key key/1 key/2] 
-				]				
-				all [
-					equal? type 'zset
-					not equal? key master-key 
-				][
-					post: 'score
-					[ZSCORE master-key key]
-				]
+				all [equal? type 'zset integer? member]				[ [ZRANGEBYSCORE key member member] ]
+				all [equal? type 'zset pair? member]				[ [ZRANGEBYSCORE key member/1 member/2] ]				
+				all [equal? type 'zset member]						[ post: 'score [ZSCORE key member] ]
 				equal? type 'zset									[ [ZRANGE key 0 -1] ]
 			] redis-commands 
 			ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
@@ -660,7 +609,7 @@ sys/make-scheme [
 			redis-port 
 			key 
 		][
-			redis-port/spec/path: join #"/" key 
+;			redis-port/spec/path: join #"/" key 
 			redis-port/state/key: key 
 			pick redis-port key 
 		]
@@ -725,7 +674,7 @@ sys/make-scheme [
 		copy: funct [
 			redis-port 
 		][
-			pick redis-port/state/key redis-port/state/index
+			pick redis-port redis-port/state/key
 		]
 		
 		at: funct [
