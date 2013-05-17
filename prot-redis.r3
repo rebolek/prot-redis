@@ -82,7 +82,7 @@ get-index: funct [
 	all [
 		redis-port/spec/path
 		key: second parse next redis-port/spec/path "/"
-		any [attempt [to integer! key] key]
+		any [attempt [to integer! key] attempt [to pair! key] key]
 	]
 ]
 
@@ -591,7 +591,7 @@ sys/make-scheme [
 			][
 				redis-type?/key redis-port key 				
 			]
-			hash?: false 
+			post: none ; post process code
 			cmd: reduce/only case [
 				all [equal? type 'none none? key]					[ [KEYS '*] ]
 				equal? type 'none									[ [] ]
@@ -605,7 +605,6 @@ sys/make-scheme [
 					[LINDEX key redis-port/state/index] 
 				]
 				equal? type 'list 									[ [LRANGE key 0 -1] ]
-				equal? type 'set									[ [SMEMBERS key] ]
 				all [
 					equal? type 'hash 
 					any [
@@ -613,10 +612,18 @@ sys/make-scheme [
 						equal? key master-key 
 					]
 				][
-					hash?: true 
+					post: 'hash
 					[HGETALL key]
 				]	
 				equal? type 'hash									[ [HGET master-key key] ]
+				all [
+					equal? type 'set
+					not equal? key master-key 
+				][
+					post: 'set
+					[SISMEMBER master-key key]
+				]
+				equal? type 'set									[ [SMEMBERS key] ]
 				all [
 					equal? type 'zset 
 					integer? key 
@@ -624,17 +631,28 @@ sys/make-scheme [
 					[ZRANGEBYSCORE master-key key key] 
 				]
 				all [
+					equal? type 'zset 
+					pair? key 
+				][
+					[ZRANGEBYSCORE master-key key/1 key/2] 
+				]				
+				all [
 					equal? type 'zset
 					not equal? key master-key 
 				][
+					post: 'score
 					[ZSCORE master-key key]
 				]
 				equal? type 'zset									[ [ZRANGE key 0 -1] ]
-				zset-value: equal? type 'zset						[ [ZSCORE master-key key] ]
 			] redis-commands 
 			ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
-			if hash? [ret: map block-string ret]
-			ret 
+			switch/default post [
+				hash	[map block-string ret]
+				set		[to logic! ret]
+				score	[load ret]
+			][
+				ret 
+			]
 		]
 		
 		select: funct [
@@ -704,11 +722,24 @@ sys/make-scheme [
 			either empty? cmd [none][send-redis-cmd redis-port cmd]		
 		]
 		
+		copy: funct [
+			redis-port 
+		][
+			pick redis-port/state/key redis-port/state/index
+		]
+		
 		at: funct [
 			redis-port 
 			index 
 		][
 			redis-port/state/index: either index [index][none]
+			redis-port 
+		]
+		
+		index?: funct [
+			redis-port 
+		][
+			redis-port/state/index
 		]
 	]
 ]

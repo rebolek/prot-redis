@@ -105,13 +105,16 @@
 [1 = delete rs/hash1]
 ; [write rs/hash1 map [name "Frodo" race "hobbit"]] ; -- impossible with current WRITE limitations
 [poke redis-port 'obj1 object [name: "Gabriela" hair: 'brown]]
-["Gabriela" = to string! pick redis-port 'name]
+[equal? "Gabriela" to string! pick redis-port 'name]
 [append redis-port map ['legs 'long]]
 [3 = length? redis-port]
 [1 = delete rs/obj1/hair]
 [2 = length? redis-port]
 [insert redis-port map ['hair 'blond]]
 [3 = length? redis-port]
+;[port? at redis-port 'name]
+;[equal? "Gabriela" to string! copy redis-port]
+;[equal? "long" to string! copy at redis-port 'legs]
 
 ;=======
 ; SET
@@ -128,6 +131,7 @@
 [3 = length? redis-port]
 [1 = insert redis-port "brown"]
 [4 = length? redis-port]
+[pick redis-port "yellow"]
 [found? find ["red" "green" "blue" "brown" "yellow"] to string! remove redis-port]
 
 
@@ -137,7 +141,7 @@
 
 [3 = write rs [ZADD 'zset1 100 "Full" 0 "Nothing" 50 "Half"]]
 [equal? ["Nothing" "Half" "Full"] block-string read rs/zset1]
-[equal? 50 load read rs/zset1/Half]
+[equal? 50 read rs/zset1/Half]
 [equal? ["Half"] block-string read rs/zset1/50]
 [1 = delete rs/zset1]
 [9 = write rs [ZADD 'zset1 58 "Merkur" 108 "Venuse" 150 "Zeme" 228 "Mars" 778 "Jupiter" 1424 "Saturn" 2867 "Uran" 4488 "Neptun" 5910 "Pluto"]]
@@ -145,5 +149,6 @@
 [1 = delete rs/zset1/Pluto]
 [8 = length? redis-port]
 [1 = poke redis-port 0 "Slunce"]
-[1 = insert redis-port [414 #Ceres]]
-[4 = append redis-port [5910 #Pluto 6482 #Haumea 6850 #Makemake 10123 #Eris]]
+[1 = insert redis-port [414 "Ceres"]]
+[4 = append redis-port [5910 "Pluto" 6482 "Haumea" 6850 "Makemake" 10123 "Eris"]]
+[4 = length? read rs/zset1/100x500]

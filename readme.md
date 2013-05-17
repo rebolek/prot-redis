@@ -1,7 +1,7 @@
 Redis scheme for Rebol3
 
 	Boleslav Březovský
-	9-5-2013
+	17-5-2013
 	
 # Introduction
 
@@ -12,16 +12,25 @@ Redis protocol uses [Ladislav's test framework](https://github.com/rebolsource/r
 
 ## Direct control
 
-	write redis://192.168.1.1 [ SET foo "bar" ]
+For direct access with port! actions like **READ**, **WRITE**, **DELETE**, you can use to keys and members using simple url! syntax:
+
+	redis://redis-server
+	redis://redis-server/key
+	redis://redis-server/key/member
+
+See port actions table below.
+
+For direct sending Redis'commands use **WRITE**:
+
+	>> write redis://192.168.1.1 [ SET foo "bar" ]
 	
-This way you can send raw commands to Redis server. The block is not reduced.
-(Words and path evaluation may be added later.)
+The block is not reduced.
 
 You can also use `send-redis-cmd` function:
 
-	port: open redis://192.168.1.1
-	send-redis-cmd port [ SET foo "bar" ]
-	close port
+	>> port: open redis://192.168.1.1
+	>> send-redis-cmd port [ SET foo "bar" ]
+	>> close port
 	
 ## Port! actions
 
@@ -31,31 +40,41 @@ For easy access you can use `WRITE` function.
 
 To set key `foo` to value `bar`:
 
-	write redis://192.168.1.1/foo "bar"
+	>> write redis://192.168.1.1/foo "bar"
 	
 You can also use WRITE to set members in other types than string.
 
-	write redis://192.168.1.1/list/1 "bar"		; set value of first member in key "list" to "bar"
-	write redis://192.168.1.1/hash/field "bar"	; set value of field "field" in key "hash" to "bar"
-	write redis://192.168.1.1/zset/bar 123		; set score of member "bar" in key "zset" to 123
+####list
+
+Set value of first member in key "list" to "bar":
+
+	>> write redis://192.168.1.1/list/1 "bar"
+
+####hash
+
+Set value of field "field" in key "hash" to "bar":
+
+	>> write redis://192.168.1.1/hash/field "bar"
+
+####set
+
+####zset
+
+set score of member "bar" in key "zset" to 123:
+
+	>> write redis://192.168.1.1/zset/bar 123
 	
 ###READ
 
-	read redis://192.168.1.1/foo			; returns "bar"	(calls GET foo)
+**READ** returns value of key. If key is string, it's returned as **binary!** other types may be returned as **block!** or **map!**. See **PICK** for details as **READ** uses it internally.
 
-Read works will all Redis type. See table for returned values:
+	>> read redis://192.168.1.1/foo			; returns "bar"	(calls GET foo)
 
-		string -> returns value as binary!
-		list   -> returns length of a list
-		hash   -> returns hash as map!
-		set    -> returns all members in set as block!
-		zset   -> returns whole set ordered from lowest to highest score
-		
-	
+
 ###QUERY - return informations about key
 
-	query redis://192.168.1.1
-	query redis://192.168.1.1/foo
+	>> query redis://192.168.1.1
+	>> query redis://192.168.1.1/foo
 	
 Return informations about key as object!.
 
@@ -68,23 +87,24 @@ Return informations about key as object!.
 
 Delete key or member in key or whole database.
 
-	delete redis://192.168.1.1
+Delete whole database - `FLUSHALL`:
 
-Delete whole database (`FLUSHALL`).
+	>> delete redis://192.168.1.1
 
-	delete redis://192.168.1.1/foo
+Delete one key - `REMOVE`:
 
-Delete one key (`REMOVE`).
+	>> delete redis://192.168.1.1/foo
 
-	delete redis://192.168.1.1/foo/1
+Delete first member in list:
 
-Delete first member in key.
+	>> delete redis://192.168.1.1/foo/1
+
 
 ###OPEN
 
 Open port and return it.
 
-	redis-port: open redis://192.168.1.1/foo
+	>> redis-port: open redis://192.168.1.1/foo
 
 
 ###OPEN?
@@ -180,8 +200,30 @@ Return KEY's value. Does not select key.
 
 	>> pick redis-port 'key
 
-This function works same for all Redis datatypes.
-	
+If index isn't selected (**redis-port/state/index** is **none**), **PICK** calls `GET key`. See table for returned values:
+
+<table>
+<th><td>Redis type</td><td>Rebol type</td><td>Description</td></th>
+<tr><td>1.</td><td>string</td><td><strong>binary!</strong></td><td></td></tr>
+<tr><td>2.</td><td>list</td><td><strong>block!</strong></td><td>Each member is returned as <strong>binary!</strong></td></tr>
+<tr><td>3.</td><td>hash</td><td><strong>map!</strong></td><td></td></tr>
+<tr><td>4.</td><td>set</td><td><strong>block!</strong></td><td></td></tr>
+<tr><td>5.</td><td>sorted set</td><td><strong>block!</strong></td><td>Whole set ordered from lowest to highest score.</td></tr>
+</table>
+
+If index is selected (for example with **AT** function), **PICK** returns member from set:
+
+<table>
+<th><td>index datatype</td><td>Redis command</td><td>Returned datatype</td><td>Comment</td></th>
+<tr><td>list</td><td><strong>integer!</strong></td><td>LINDEX key index</td><td><strong>binary!</strong></td><td></td></tr>
+<tr><td>hash</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>HGET key index</td><td><strong>binary!</strong></td><td></td></tr>
+<tr><td>set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SISMEMBER key member</td><strong>binary!</strong><td><strong>logic!</strong></td><td>Returns <strong>TRUE</strong> if member exists in given set.</td></tr>
+<tr><td>sorted set</td><td><strong>integer!</strong></td><td>ZRANGEBYSCORE key index index</td><td><strong>block!</strong></td><td></td></tr>
+<tr><td>sorted set</td><td><strong>pair!</strong></td><td>ZRANGEBYSCORE key index/1 index/2</td><td><strong>block!</strong></td><td>Return all members with score in given range</td></tr>
+<tr><td>sorted set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>ZSCORE key member</td><td><strong>integer!</strong></td><td></td></tr>
+</table>
+
+
 ###POKE
 
 If KEY is valid key name, set it's value. If KEY is integer and list key is already selected, set value in that list key.
