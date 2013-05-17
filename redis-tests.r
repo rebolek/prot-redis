@@ -134,4 +134,11 @@
 ;============
 
 [3 = write rs [ZADD 'zset1 100 "Full" 0 "Nothing" 50 "Half"]]
-[equal? ["Nothing" "Half" "Full"] block-string read rs/zset]
+[equal? ["Nothing" "Half" "Full"] block-string read rs/zset1]
+[equal? 50 load read rs/zset1/Half]
+[equal? ["Half"] block-string read rs/zset1/50]
+[1 = delete rs/zset1]
+[9 = write rs [ZADD 'zset1 58 "Merkur" 108 "Venuse" 150 "Zeme" 228 "Mars" 778 "Jupiter" 1424 "Saturn" 2867 "Uran" 4488 "Neptun" 5910 "Pluto"]]
+[9 = length? select redis-port 'zset1]
+[1 = delete rs/zset1/Pluto]
+[8 = length? redis-port]

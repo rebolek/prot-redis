@@ -464,7 +464,7 @@ sys/make-scheme [
 				all [index equal? type 'list]	[ [ LREM key 1 index ] ]	; TODO: delete redis://server/key/value/count 	???
 				all [index equal? type 'hash]	[ [ HDEL key index ] ]
 				all [index equal? type 'set]	[ [ SREM key index ] ]
-				equal? type 'zset				[ [ ZREM key index ] ]
+				all [index equal? type 'zset]	[ [ ZREM key index ] ]
 				true							[ [ DEL key ] ]
 			]
 			send-redis-cmd redis-port reduce/only request redis-commands 
@@ -577,7 +577,8 @@ sys/make-scheme [
 			redis-port 
 			key 
 		][
-			type: either redis-port/state/key [
+			master-key: redis-port/state/key
+			type: either master-key [
 				redis-type? redis-port 
 			][
 				redis-type?/key redis-port key 				
@@ -600,16 +601,28 @@ sys/make-scheme [
 				all [
 					equal? type 'hash 
 					any [
-						none? redis-port/state/key
-						equal? key redis-port/state/key
+						none? master-key 
+						equal? key master-key 
 					]
 				][
 					hash?: true 
 					[HGETALL key]
 				]	
-				equal? type 'hash									[ [HGET redis-port/state/key key] ]
+				equal? type 'hash									[ [HGET master-key key] ]
+				all [
+					equal? type 'zset 
+					integer? key 
+				][
+					[ZRANGEBYSCORE master-key key key] 
+				]
+				all [
+					equal? type 'zset
+					not equal? key master-key 
+				][
+					[ZSCORE master-key key]
+				]
 				equal? type 'zset									[ [ZRANGE key 0 -1] ]
-				zset-value: equal? type 'zset						[ [ZSCORE redis-port/state/key key] ]
+				zset-value: equal? type 'zset						[ [ZSCORE master-key key] ]
 			] redis-commands 
 			ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
 			if hash? [ret: map block-string ret]
@@ -660,7 +673,7 @@ sys/make-scheme [
 				equal? type 'list	[[LLEN key]]
 				equal? type 'hash	[[HLEN key]]
 				equal? type 'set	[[SCARD key]]
-				equal? type 'zset	[[]]
+				equal? type 'zset	[[ZCARD key]]
 			] redis-commands 
 			either empty? cmd [none][send-redis-cmd redis-port cmd]
 		]
