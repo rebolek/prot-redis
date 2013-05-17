@@ -494,6 +494,7 @@ sys/make-scheme [
 				equal? type 'list		[[RPUSH key value]]
 				equal? type 'hash		[compose [HMSET (key) (flat-body-of value)]]
 				equal? type 'set		[[SADD key value]]
+				equal? type 'zset		[compose [ZADD (key) (value)]]
 			]
 			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
@@ -510,6 +511,7 @@ sys/make-scheme [
 				equal? type 'list		[[LPUSH key value]]
 				equal? type 'hash		[compose [HMSET (key) (flat-body-of value)]]				
 				equal? type 'set		[[SADD key value]]
+				equal? type 'zset		[compose [ZADD (key) (value)]]
 			]
 			send-redis-cmd redis-port reduce/only cmd redis-commands 
 		]
@@ -569,6 +571,12 @@ sys/make-scheme [
 					compose [LSET (redis-port/state/key) (key - 1) (value)]
 				]
 				equal? type 'set				[reduce ['SADD key value]]	; FIXME: does not clear previous values
+				all [
+					equal? type 'zset
+					integer? key 
+				][
+					reduce ['ZADD redis-port/state/key key value]
+				]
 			]
 			send-redis-cmd redis-port cmd 
 		]
