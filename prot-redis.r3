@@ -81,17 +81,6 @@ get-key: funct [
 	]
 ]
 
-get-index: funct [
-	"Return index or NONE"
-	redis-port [port!]
-][
-	all [
-		redis-port/spec/path
-		key: second parse next redis-port/spec/path "/"
-		any [attempt [to integer! key] attempt [to pair! key] key]
-	]
-]
-
 make-bulk: func [
 	data	[ any-type! ] "Data to bulkize"
 ] [
