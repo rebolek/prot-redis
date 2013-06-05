@@ -285,6 +285,50 @@ send-redis-cmd: func [
 	parse-response redis-port/state/tcp-port/spec/redis-data
 ]
 
+read-redis-key: funct [
+	"Return raw key's value."
+	redis-port	[port!]
+	key			[any-string! any-word! any-path!]
+	/convert	"Convert data to Rebol type"
+][
+;	print ["read-redis-key:" key]
+	member: none 
+	if all [path? key 2 = length? key][
+		member: second key 
+		key: first key 
+	]
+	type: redis-type?/key redis-port key 
+	post: none ; post process code
+	cmd: reduce/only case [
+		all [equal? type 'none none? key]					[ [KEYS '*] ]
+		equal? type 'none									[ [] ]
+		equal? type 'string									[ [GET key] ]
+		all [equal? type 'list integer? member]				[ compose [LINDEX key (member - 1)] ]
+		equal? type 'list 									[ [LRANGE key 0 -1] ]
+		all [equal? type 'hash member]						[ [HGET key member] ]	
+		equal? type 'hash									[ post: 'hash [HGETALL key] ]
+		all [equal? type 'set member]						[ post: 'set [SISMEMBER key member] ]
+		equal? type 'set									[ [SMEMBERS key] ]
+		all [equal? type 'zset integer? member]				[ [ZRANGEBYSCORE key member member] ]
+		all [equal? type 'zset pair? member]				[ [ZRANGEBYSCORE key member/1 member/2] ]				
+		all [equal? type 'zset member]						[ post: 'score [ZSCORE key member] ]
+		equal? type 'zset									[ [ZRANGE key 0 -1] ]
+	] redis-commands 
+;	ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
+	ret: either empty? cmd [none][sync-write redis-port make-bulk-request cmd]
+	if all [ret convert] [
+		ret: parse-response ret
+		ret: switch/default post [
+			hash	[map block-string ret]
+			set		[to logic! ret]
+			score	[load ret]
+		][
+			ret 
+		]
+	]
+	ret
+] 
+
 do-redis: func [
 	"Open Redis port, send all commands in data block and close port."
 	redis-port	[port!]
@@ -310,7 +354,10 @@ sync-write: func [
 	unless port? wait [tcp-port redis-port/spec/timeout] [
 		make-redis-error "redis timeout on tcp-port"
 	]
-	; NOYE: why the port cannot be closed here?
+	; NOTE: why the port cannot be closed here?
+	
+	; return Redis data
+	redis-port/state/tcp-port/spec/redis-data
 ]
 
 sys/make-scheme [
@@ -370,9 +417,14 @@ sys/make-scheme [
 			key: get-key open redis-port 
 ;			type: redis-type? redis-port 
 ;			open redis-port 
-			ret: pick redis-port key 
-			close redis-port 
-			ret 
+;			ret: pick redis-port key 
+
+			ret: read-redis-key redis-port key
+;			sync-write redis-port make-bulk-request get-key open redis-port 
+;			close redis-port 
+;			redis-port/state/tcp-port/spec/redis-data
+
+			ret
 		]
 		
 		write: funct [
@@ -561,36 +613,7 @@ sys/make-scheme [
 			redis-port 
 			key 
 		][
-			member: none 
-			if all [path? key 2 = length? key][
-				member: second key 
-				key: first key 
-			]
-			type: redis-type?/key redis-port key 
-			post: none ; post process code
-			cmd: reduce/only case [
-				all [equal? type 'none none? key]					[ [KEYS '*] ]
-				equal? type 'none									[ [] ]
-				equal? type 'string									[ [GET key] ]
-				all [equal? type 'list integer? member]				[ compose [LINDEX key (member - 1)] ]
-				equal? type 'list 									[ [LRANGE key 0 -1] ]
-				all [equal? type 'hash member]						[ [HGET key member] ]	
-				equal? type 'hash									[ post: 'hash [HGETALL key] ]
-				all [equal? type 'set member]						[ post: 'set [SISMEMBER key member] ]
-				equal? type 'set									[ [SMEMBERS key] ]
-				all [equal? type 'zset integer? member]				[ [ZRANGEBYSCORE key member member] ]
-				all [equal? type 'zset pair? member]				[ [ZRANGEBYSCORE key member/1 member/2] ]				
-				all [equal? type 'zset member]						[ post: 'score [ZSCORE key member] ]
-				equal? type 'zset									[ [ZRANGE key 0 -1] ]
-			] redis-commands 
-			ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
-			switch/default post [
-				hash	[map block-string ret]
-				set		[to logic! ret]
-				score	[load ret]
-			][
-				ret 
-			]
+			read-redis-key/convert redis-port key
 		]
 		
 		select: funct [
