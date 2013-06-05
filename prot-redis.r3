@@ -37,7 +37,7 @@ WRITE block! and binary! ignores path (key) - TODO: should it select database?
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
 
-debug: none 
+debug: :print
 
 flat-body-of: funct [
 	"Change all set-words to words"
@@ -211,7 +211,10 @@ make-redis-error: func [
 	]
 ]
 
-awake-handler: func [event /local tcp-port] [
+awake-handler: func [
+	event 
+	/local tcp-port
+][
 	debug ["=== Client event:" event/type]
 	tcp-port: event/port
 	switch/default event/type [
@@ -225,7 +228,7 @@ awake-handler: func [event /local tcp-port] [
 			false 
 		]
 		connect [
-			debug "connected "
+			debug ["connected: " tcp-port/locals]
 			write tcp-port tcp-port/locals
 			tcp-port/spec/port-state: 'ready
 			false 
@@ -239,6 +242,7 @@ awake-handler: func [event /local tcp-port] [
 		wrote [
 			debug "written, so read port"
 			read tcp-port 
+			debug "after read"
 			false 
 		]
 		close [
@@ -252,6 +256,32 @@ awake-handler: func [event /local tcp-port] [
 ;we do either as the default condition ( ie. unspecified event ),
 ;or with Error, Read and Close.
 ;        }
+]
+
+async-handler: func [event /local port] [
+    port: event/port
+    print ["==TCP-event:" event/type]
+
+	switch/default event/type [
+		lookup [open event/port]
+		connect [
+			write event/port event/port/locals
+		]
+		wrote [read event/port]
+		read  [
+			print ["..Read" length? event/port/data "bytes"]
+			return true
+		]
+		close [
+			event/port/spec/port-state: 'closed
+			return true
+		]
+	] [
+		print ["Unexpected event:" event/type]
+		close event/port
+		return true
+	]
+	false ; returned
 ]
 
 redis-commands: [
@@ -377,6 +407,7 @@ sys/make-scheme [
 			redis-port [port!]
 			/local tcp-port 
 		][
+			print "OPEN port"
 			if redis-port/state [return redis-port]
 			if none? redis-port/spec/host [make-redis-error "Missing host address"]
 			redis-port/state: context [
@@ -397,7 +428,7 @@ sys/make-scheme [
 					port/state/tcp-port now looks like this
 					[ spec [object!] scheme [object!] actor awake state data locals ]
 			}
-			tcp-port/awake: none 
+			tcp-port/awake: :redis-port/awake ;none 
 			open tcp-port 
 			redis-port 
 		]
@@ -414,41 +445,35 @@ sys/make-scheme [
 			"Read from port (currently SYNC only)"
 			redis-port [port!]
 		][
+			print "READ EVENT"
 			key: get-key open redis-port 
-;			type: redis-type? redis-port 
-;			open redis-port 
-;			ret: pick redis-port key 
-
-			ret: read-redis-key redis-port key
-;			sync-write redis-port make-bulk-request get-key open redis-port 
-;			close redis-port 
-;			redis-port/state/tcp-port/spec/redis-data
-
-			ret
+			read-redis-key redis-port key
 		]
 		
-		write: funct [
+		write: func [
 			"Write to port (SYNC and ASYNC)"
 			redis-port [port!]
-			value [block! string! binary!]
+			data [block! string! binary!]
+			/local tcp-port key ret
 		][
 			either any-function? :redis-port/awake [
-;				print "ASYNC"
+				print "ASYNC"
 			;  --- ASYNCHRONOUS OPERATION
 				unless open? redis-port [cause-error 'Access 'not-open redis-port/spec/ref]
-				if redis-port/state/state <> 'ready [http-error "Port not ready"]
-				redis-port/state/awake: :port/awake
-				parse-write-dialect redis-port value 
-				do-request redis-port 
-				redis-port 
+				tcp-port: redis-port/state/tcp-port
+				either probe tcp-port/spec/port-state = 'ready [
+					write tcp-port to binary! make-bulk-request data 
+				][
+					tcp-port/locals: to binary! make-bulk-request data
+				]
 			][
 			;  --- SYNCHRONOUS OPERATION
 				key: get-key redis-port 
-				either all [not key block? value][
-					ret: send-redis-cmd redis-port value 
+				either all [not key block? data][
+					ret: send-redis-cmd redis-port data 
 				][
 					open redis-port 
-					ret: poke redis-port key value 
+					ret: poke redis-port key data
 					close redis-port 
 				]
 				ret 
