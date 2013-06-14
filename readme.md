@@ -1,565 +1,131 @@
-Redis scheme for Rebol3
+# Redis scheme for Rebol3
 
 	Boleslav Březovský
-	17-5-2013
+	11-6-2013
 	
 # Introduction
 
 This script provides Redis scheme for Rebol3. [Redis](http://www.redis.io) is key/value (NoSQL) database.
 Rebol3 is newest version of [Rebol](http://www.rebol.com) programming language.
-This script implements Redis as standard Rebol protocol that can be accessed using redis://redis-server notation.
+This script implements Redis as standard Rebol protocol that can be accessed using **redis://redis-server** notation.
 Redis protocol uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test) for unit testing and is released under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0.html).
 
-## Direct control
+# How does it work?
 
-For direct access with port! actions like **READ**, **WRITE**, **DELETE**, you can use to keys and members using simple url! syntax:
+**Redis** runs as server listening on TCP port, so access from **Rebol** is done using standard Rebol3 scheme.
+All Rebol3 schemes are asynchronous - you need to call **WAIT** to fire up event system
+( [See documentation for details](http://www.rebol.net/wiki/Event_System) ).
+Because the connection speed between **Rebol** client and **Redis** server may vary, 
+issuing one command at time can get very slow (for example with total roundtrip time of 250ms,
+you are limited to only four operations per second).
+To prevent this problem, **Redis** supports [pipelining](http://redis.io/topics/pipelining).
+In pipelined mode the client can send more commands in one batch instead off sending one command at time.
+Pipelining is supported by this scheme and defines how the protocol will behave.
 
-	redis://redis-server
-	redis://redis-server/key
-	redis://redis-server/key/member
+## Pipelining modes
 
-See port actions table below.
+There are basicaly three different modes of operation and they are defined by the length of the pipeline.
+The length is stored in **redis/pipeline-limit**.
+Pipeline limit is number of commands that will be send in one batch.
 
-For direct sending Redis'commands use **WRITE**:
+	>> redis/pipeline-limit
+	== 0
+	>> redis/pipeline-limit: 10'000
+	== 10000
 
-	>> write redis://192.168.1.1 [ SET foo "bar" ]
-	
-The block is not reduced.
+### Manual mode: redis/pipeline-limit = 0
 
-You can also use `send-redis-cmd` function:
+User is in charge of sending commands to **Redis** server.
+Commands must be processed with **WAIT** or **READ** (see below) functions.
 
-	>> port: open redis://192.168.1.1
-	>> send-redis-cmd port [ SET foo "bar" ]
-	>> close port
-	
-## Port! actions
+### Simple mode: redis/pipeline-limit = 1
 
-###WRITE
+Each command is processed individually. 
+To make things easier for beginners, this is default mode.
 
-For easy access you can use `WRITE` function.
+### Automatic mode: redis/pipeline-limit > 1
 
-To set key `foo` to value `bar`:
+Commands are send after pipeline limit is reached.
+**NOTE:** If you end the script and the queue is not empty, commands are **NOT** processed!
+You may force the procsessing with **WAIT** or **READ** in such situation.
 
-	>> write redis://192.168.1.1/foo "bar"
-	
-You can also use WRITE to set members in other types than string.
+## Port functions
 
-####list
+### OPEN
 
-Set value of first member in key "list" to "bar":
+Open **Redis** port and clear command pipeline.
 
-	>> write redis://192.168.1.1/list/1 "bar"
+### WRITE
 
-####hash
+Write **Redis** command to the pipeline.
+When the pipeline limit is reached, commands are send to the server.
 
-Set value of field "field" in key "hash" to "bar":
+	>> rs: open redis://redis-server
+	>> write rs [SET foo 1]
+	>> write rs [INCR foo]
 
-	>> write redis://192.168.1.1/hash/field "bar"
+**Write** has three modes of operations: basic, manual and automatic (see the pipelining modes).#
 
-####set
+In *Basic mode* **write** returns server's response as **binary!**.
 
-####zset
+In *Manual* and *Automatic* modes **write** returns pipeline length as **integer!**.
 
-set score of member "bar" in key "zset" to 123:
+In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, **write** returns 0 and server's response is stored in **redis/data** (binary bulk data) and **redis/response** (parsed bulk data).
 
-	>> write redis://192.168.1.1/zset/bar 123
-	
-###READ
+### READ
 
-**READ** returns value of key. If key is string, it's returned as **binary!** other types may be returned as **block!** or **map!**. See **PICK** for details as **READ** uses it internally.
+Read has two modes of operations:
 
-	>> read redis://192.168.1.1/foo			; returns "bar"	(calls GET foo)
+#### Keys
 
+Read value of given key.
+Key is specified in the url in this format:
 
-###QUERY - return informations about key
+	>> read redis://server/key
+	== #{...}
+	>> read redis://server/key/member
+	== #{...}
 
-	>> query redis://192.168.1.1
-	>> query redis://192.168.1.1/foo
-	
-Return informations about key as object!.
+Protocol will first check for key type and then will return it's value.
+This is not an atomic operation and is slower than direct access using commands.
 
-	name -> key name
-	size -> key size (length of string or number of members)
-	date -> expiration date or none!
-	type -> Redis datatype
+#### Commands
 
-###DELETE
+Send commands in pipeline to the server and return response.
+This is prefered mode of operations.
 
-Delete key or member in key or whole database.
+	>> write redis://redis-server [SET foo bar]
+	>> read redis://redis-server
+	== #{2B4F4B0D0A}
 
-Delete whole database - `FLUSHALL`:
+## Redis dialect
 
-	>> delete redis://192.168.1.1
+Redis dialect uses **Redis** commands. 
+See the list of commands [here](http://redis.io/commands).
+Commands are followed by values.
+Get-word! and get-path! can be used to get word or path value.
+Paren! evaluates **Rebol** code.
+All other datatypes are passed as-is.
+For example, `SET foo bar` is same as `SET "foo" "bar"`.
 
-Delete one key - `REMOVE`:
-
-	>> delete redis://192.168.1.1/foo
-
-Delete first member in list:
-
-	>> delete redis://192.168.1.1/foo/1
-
-
-###OPEN
-
-Open port and return it.
-
-	>> redis-port: open redis://192.168.1.1/foo
-
-
-###OPEN?
-
-Returns `TRUE` when port is open.
-
-###CLOSE
-
-Close port.
-
-###CREATE
-
-No information yet.
-
-###RENAME
-
-No information yet.
-
-###UPDATE
-
-No information yet.
-
-### Port! actions table
-
-<table border="1">
-	<th>
-		<td><code>string</code></td>
-		<td><code>list</code></td>
-		<td><code>hash</code></td>
-		<td><code>set</code></td>
-		<td><code>sorted set</code></td>
-		<td><code>pub/sub</code></td>
-	</th>
-	<tr>
-		<td><code>READ</code></td>
-		<td><strong>binary!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>map!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>WRITE</code></td>
-		<td><strong>logic!</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>QUERY</code></td>
-		<td><strong>object!</strong></td>
-		<td><strong>object!</strong></td>
-		<td><strong>object!</strong></td>
-		<td><strong>object!</strong></td>
-		<td><strong>object!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>DELETE</code></td>
-		<td><strong>integer!</strong></td>
-		<td><strong>integer!</strong></td>
-		<td><strong>integer!</strong></td>
-		<td><strong>integer!</strong></td>
-		<td><strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-</table>
-
-## Series! actions
-
-Series action allows accessing Redis database like normal Rebol block. 
-It is possible to access Redis' datatypes directly from Rebol, so you can APPEND to lists or sets.
-All function use standard Rebol 1-based indexing and protocol automaticaly converts indexes to zero based.
-
-**NOTE:** Because Redis database is different from Rebol block, 
-some commands have slightly different meaning and may return different values than help string suggests.
-Please, read the documentation carefully so you are aware of these differencies.
-
-###SELECT
-
-Select KEY and return its value. Key stays selected for further operations (`APPEND`, `CLEAR` etc)
-
-	>> select redis-port 'list-key
-
-This function works same for all Redis datatypes.	
-
-###PICK
-
-Return KEY's value. Does not select key.
-
-	>> pick redis-port 'key
-
-If **key** argument is **any-word!** or **any-string!**, key is selected using `GET key`:
-
-<table>
-<th><td>Redis type</td><td>Rebol type</td><td>Description</td></th>
-<tr><td>1.</td><td>string</td><td><strong>binary!</strong></td><td></td></tr>
-<tr><td>2.</td><td>list</td><td><strong>block!</strong></td><td>Each member is returned as <strong>binary!</strong></td></tr>
-<tr><td>3.</td><td>hash</td><td><strong>map!</strong></td><td></td></tr>
-<tr><td>4.</td><td>set</td><td><strong>block!</strong></td><td></td></tr>
-<tr><td>5.</td><td>sorted set</td><td><strong>block!</strong></td><td>Whole set ordered from lowest to highest score.</td></tr>
-</table>
-
-If **key** argument is **path!**, **PICK** returns member from set:
-
-<table>
-<th><td>index datatype</td><td>Redis command</td><td>Returned datatype</td><td>Comment</td></th>
-<tr><td>list</td><td><strong>integer!</strong></td><td>LINDEX key index</td><td><strong>binary!</strong></td><td></td></tr>
-<tr><td>hash</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>HGET key index</td><td><strong>binary!</strong></td><td></td></tr>
-<tr><td>set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SISMEMBER key member</td><td><strong>logic!</strong></td><td>Returns <strong>TRUE</strong> if member exists in given set.</td></tr>
-<tr><td>sorted set</td><td><strong>integer!</strong></td><td>ZRANGEBYSCORE key index index</td><td><strong>block!</strong></td><td></td></tr>
-<tr><td>sorted set</td><td><strong>pair!</strong></td><td>ZRANGEBYSCORE key index/1 index/2</td><td><strong>block!</strong></td><td>Return all members with score in given range</td></tr>
-<tr><td>sorted set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>ZSCORE key member</td><td><strong>integer!</strong></td><td></td></tr>
-</table>
-
-
-###POKE
-
-**POKE** will store value to a key. If key is **path!**, POKE can set value of members in key. See table below for details.
-
-
-
-	>> poke redis-port 'name "Boleslav"
-	>> select redis-port 'colours
-	>> poke redis-port 1 "Blue"
-
-<table>
-<th><td>index datatype</td><td>value datatype</td><td>Redis command</td><td>Returned datatype</td><td>Comment</td></th>
-
-<tr><td>string</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SET key value</td><td><strong>integer!</strong></td><td></td></tr>
-
-<tr><td>string</td><td><strong>integer!</strong></td><td colspan="4">Not implemented (may be used for bitsets)</td></tr>
-
-<tr><td>list</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td><strong>block!</strong></td><td>SET key value</td><td><strong>integer!</strong></td><td></td></tr>
-
-<tr><td>list</td><td><strong>path!</strong></td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>LSET key index value</td><td><strong>integer!</strong></td><td></td></tr>
-
-<tr><td>hash</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td><strong>map!</strong> | <strong>object!</strong></td><td>HSET key value</td><td><strong>integer!</strong></td><td></td></tr>
-
-<tr><td>hash</td><td><strong>path!</strong></td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>HSET key value</td><td><strong>integer!</strong></td><td></td></tr>
-
-<tr><td>set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td colspan="4">Not implemented</tr>
-
-<tr><td>set</td><td><strong>path!</strong><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td>SADD key value</td><td><strong>integer!</strong></td><td></td></tr>
-
-<tr><td>sorted set</td><td><strong>any-string!</strong> | <strong>any-word!</strong></td><td colspan="4">Not implemented</tr>
-
-<tr><td>sorted set</td><td><strong>path!</strong></td><td><strong>integer!</strong></td><td>ZADD key value member</td><td><strong>integer!</strong></td><td></td></tr>
-
-</table>
-
-###CLEAR
-
-####string
-
-Clear the string.
-
-**NOTE:** String is rewritten with empty string.
-
-####list
-
-Remove all elements.
-
-	>> select redis-port 'colours
-	>> clear redis-port
-
-####hash
-
-Remove all fields and values.
-
-###APPEND
-
-####string
-
-Append value at the end of the list
-
-	>> poke redis-port 'key "Redis"
-	>> append redis-port "Rebol"
-	>> pick redis-port 'key
-	== "RedisRebol"
-
-####list
-
-Append value to end and return list.
-
-	>> select redis-port 'colours
-	>> append redis-port "Green"
-
-####hash
-
-Add new elements to hash. Argument must be block of [field value] pairs.
-
-####set
-
-Add new elements to set.
-
-####sorted set
-
-Add new elements to sorted set. Argument must be block of [score member] pairs.
-
-###INSERT
-
-####string
-
-*NOT AVAILABLE:* Redis doesn't support insert for string values. It may be implemented later at protocol level. 
-
-####list
-
-Insert value at the head of the list. 
-
-*NOTE:* Redis cannot insert into list at index position, so **INSERT** is implemented as `RPUSH key value`.
-
-####hash
-
-Add new elements to hash. Argument must be block of [field value] pairs. Same as **APPEND**.
-
-####set
-
-Add new elements to set. Same as **APPEND**.
-
-####sorted set
-
-Add new elements to sorted set. Argument must be block of [score member] pairs. Same as **APPEND**.
-
-*NOT AVAILABLE*
-
-###LENGTH?
-
-####string
-
-Return length of value.
-
-	>> poke redis-port 'name "Boleslav"
-	>> length? redis-port
-	== 8
-
-####list
-
-Return number of elements in string.
-
-	>> select redis-port 'colors
-	>> poke redis-port ["red" "green" "blue"]
-	>> length? redis-port
-	== 3
-
-####hash
-
-Return number of fields in hash.
-
-	>> select redis-port 'person
-	>> poke redis-port map [name: "Boleslav" age: 37]
-	>> length? redis-port
-	== 2
-
-####set
-
-Return number of elements in set.
-
-	>> write redis-server/beatles ['SADD John George Paul Mary John]
-	>> select redis-port beatles
-	>> length? redis-port
-	== 4
-
-####sorted set
-
-Return number of elements in sorted set.
-
-	>> write redis-server/score ['ZADD 0 John 0 George 1 Paul 10 Mary]
-	>> select redis-port score
-	>> length? redis-port
-	== 4
-
-###CHANGE
-
-####string
-
-Same as `POKE`.
-
-####list
-
-###REMOVE
-
-###list
-
-`LPOP:` Remove and get the first element in a list.
-
-####hash
-
-####set
-
-`SPOP:` Remove and return a random member from a set.
-
-####sorted set
-
-###COPY
-
-No information yet.
-
-###FIND
-
-No information yet.
-
-###NEXT
-
-No information yet.
-
-###BACK
-
-No information yet.
-
-###AT
-
-Sets **redis-port/state/index** to **index** . This value is used by series actions that take only port! as argument. Use **false** to reset index.
-
-####string
-
-**NOT AVAILABLE**
-
-####list
-
-Set position in list.
-
-####hash
-
-**NOTE:** Because `AT` accepts only **integer!**, **logic!** and **pair!**, it's not possible to select field in hash.
-
-####set
-
-####sorted set
-
-###SKIP
-
-No information yet.
-
-###INDEX?
-
-Return **redis-port/state/index**.
-
-	>> select redis-port 'list
-	>> at redis-port 3
-	>> index? redis-port
-	== 2
-
-###EMPTY?
-
-No information yet.
-
-###HEAD
-
-No information yet.
-
-###HEAD?
-
-No information yet.
-
-###TAIL
-
-No information yet.
-
-###TAIL?
-
-No information yet.
-
-###MODIFY
-
-No information yet.
-
-###PAST?
-
-No information yet.
-
-###Series! action table
-
-<table border="1">
-	<th>
-		<td><code>string</code></td>
-		<td><code>list</code></td>
-		<td><code>hash</code></td>
-		<td><code>set</code></td>
-		<td><code>sorted set</code></td>
-		<td><code>pub/sub</code></td>
-	</th>
-	<tr>
-		<td><code>SELECT</code></td>
-		<td><strong>binary!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>map!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>PICK</code></td>
-		<td><strong>binary!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>map!</strong></td>
-		<td><strong>block!</strong></td>
-		<td><strong>binary!</strong> or <strong>block!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>POKE</code></td>
-		<td><strong>logic!</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>CLEAR</code></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td><strong>not implemented</strong></td>
-		<td><strong>not implemented</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>APPEND</code></td>
-		<td>length as <strong>integer!</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td>number of added elements as <strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>INSERT</code></td>
-		<td><strong>N/A</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td><strong>logic!</strong></td>
-		<td>length as <strong>integer!</strong></td>
-		<td>number of added elements as <strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>LENGTH?</code></td>
-		<td>string length as <strong>integer!</strong></td>
-		<td>number of elements as <strong>integer!</strong></td>
-		<td>number of fields as <strong>integer!</strong></td>
-		<td>number of elements as <strong>integer!</strong></td>
-		<td><strong>not implemented</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-	<tr>
-		<td><code>REMOVE</code></td>
-		<td><strong>not implemented</strong></td>
-		<td>first member as <strong>binary!</strong></td>
-		<td><strong>not implemented</strong></td>
-		<td>random member as <strong>binary!</strong></td>
-		<td><strong>not implemented</strong></td>
-		<td><strong>not implemented</strong></td>
-	</tr>
-</table>
+	>> key: "foo"
+	== "foo"
+	>> value: "bar"
+	== "bar"
+	>> port: open redis://redis-server
+	>> write port [SET key value]
+	;; key: value
+	>> write port [SET "key" "value"]
+	;; key: value	
+	>> write port [SET key :value]
+	.. key: bar
+	>> write port [SET :key :value]
+	.. foo: bar
+	>> write port [SET key (1 + 1)]
+	.. key: 2
+
+####Why aren't word!s and path!s evaluated?
+
+**Word!**s and **path!**s are not evaluated, to get their values you need to use **get-word!** or **get-path!** notation. This has its reasons. In **Redis**, composed keys in form of `user:1:name` are often used. Of course you are free to use this type of keys, but because this is **Rebol** client library, you have option to use `user/1/name` instead. This ways keys can be mapped directly to **Rebol** values on demand. 
+
+Also, using **path!** is ***much*** faster than working with **string!**. **make path! [user 1 name]** runs about 8-9 faster than **rejoin ["user" 1 "name"]** on my machine.

@@ -103,17 +103,12 @@ make object! compose [
 		test-sources log-file-prefix test-checksum
 	] [
 		allowed-flags: flags
-		
-		log-file-prefix: %r
+
 
 		; calculate test checksum
 		test-checksum: checksum/method read-binary file 'sha1
 		
-		log-file: log-file-prefix
-		repeat i length? version: system/version [
-			append log-file "_"
-			append log-file mold version/:i
-		]
+		log-file: to file! first parse last split-path file "."
 		foreach checksum reduce [code-checksum test-checksum] [
 			append log-file "_"
 			append log-file copy/part skip mold checksum 2 6

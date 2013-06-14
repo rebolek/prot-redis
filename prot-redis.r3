@@ -1,26 +1,14 @@
 REBOL [
     Title: "redis"
-    File: %redis.r3
-    Date: 8-5-2013
+    File: %prot-redis.r3
+    Date: 14-6-2013
 	Created: 30-3-2013
-    Version: 0.0.1
+    Version: 0.1.9
     Author: "Boleslav Březovský"
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
-		"send-redis-cmd: after lookup convert any-word! to word! (so #key, 'key, key:, key are same key) or not?"
-		"send-redis-cmd should accept Rebol datatypes and convert them for user."
-		"Is it possible to implement `delete redis://192.168.1.1/list/1` to remove one member?"
-	]
-	History: [
-		"Process return codes"
-		"host without key plus block: command"	
-		{
-			Add shortcut function for:
-				sync-write redis-port make-bulk-request reduce [ some-data ]
-				parse-response redis-port/state/tcp-port/spec/redis-data
-				
-			TODO: Can't WRITE be used instead?	
-		}
+		"`delete redis://192.168.1.1/list/1` to remove one member"
+		"length? and other series actions should require key (redis://server/key)"
 	]
 	Notes: [
 {WRITE -
@@ -37,7 +25,9 @@ WRITE block! and binary! ignores path (key) - TODO: should it select database?
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
 
-debug: :print
+debug: none
+;debug: :print
+
 
 flat-body-of: funct [
 	"Change all set-words to words"
@@ -72,7 +62,7 @@ get-key: funct [
 	any [
 		all [
 			redis-port/state
-			redis-port/state/key
+			get in redis-port/state 'key
 		]
 		all [
 			redis-port/spec/path
@@ -83,19 +73,23 @@ get-key: funct [
 
 make-bulk: func [
 	data	[ any-type! ] "Data to bulkize"
+	/local out
 ] [
-	data: form data ; TODO: does it support all datatypes?
-	rejoin [
-		"$" length? data crlf 
+	out: make binary! 64
+	data: to binary! form data ; TODO: does it support all datatypes?
+	repend out [
+		"$" to string! length? data crlf 
 		data crlf 
 	]
 ]
 
 make-bulk-request: func [
 	args	[ block! ]	"Arguments for the bulk request"
-	/local
+	/local out
 ] [
-	append rejoin [ "*"	length? args crlf ] collect [ 
+	out: make binary! 64 * 32
+	repend out rejoin [ "*"	to string! length? args crlf ]
+	append out collect [ 
 		foreach arg args [keep make-bulk arg] 
 	]
 ]
@@ -113,7 +107,7 @@ parse-response: func [
 		)
 		crlf 
 	]
-	ret: switch to char! data/1 [
+	ret: switch/default to char! data/1 [
 		#"+" [get-response]				; STATUS reply
 		#"-" [make error! get-response]	; ERROR reply
 		#":" [to integer! get-response]	; INTEGER reply
@@ -139,7 +133,8 @@ parse-response: func [
 			]
 			block 
 		]
-	]
+	][ret]
+	
 	switch/default ret [
 		"OK"		[true]
 	][
@@ -197,7 +192,9 @@ redis-type?: funct [
 	/key name "Name of key"
 ][
 	unless key [name: get-key redis-port ]
-	to lit-word! send-redis-cmd redis-port reduce [ 'TYPE name ]
+	if name [
+		to lit-word! write redis-port [ TYPE :name ]
+	]
 ]
 
 make-redis-error: func [
@@ -211,74 +208,64 @@ make-redis-error: func [
 	]
 ]
 
-awake-handler: func [
-	event 
-	/local tcp-port
+
+process-pipeline: func [
+	"Send pipelined commands to server and get response"
+	redis-port	[port!]
 ][
-	debug ["=== Client event:" event/type]
-	tcp-port: event/port
-	switch/default event/type [
-		error [
-			debug "error event received"
-			tcp-port/spec/port-state: 'error
-			true 
-		]
-		lookup [
-			open tcp-port 
-			false 
-		]
-		connect [
-			debug ["connected: " tcp-port/locals]
-			write tcp-port tcp-port/locals
-			tcp-port/spec/port-state: 'ready
-			false 
-		]
-		read [
-			debug ["^\read:" length? tcp-port/data]
-			tcp-port/spec/redis-data: copy tcp-port/data
-			clear tcp-port/data
-			true 
-		]
-		wrote [
-			debug "written, so read port"
-			read tcp-port 
-			debug "after read"
-			false 
-		]
-		close [
-			debug "closed on us!"
-			tcp-port/spec/port-state: 'ready
-			true 
-		]
-	] [true]
-;	comment {
-;the awake handler returns false normally unless we want to exit the wait which
-;we do either as the default condition ( ie. unspecified event ),
-;or with Error, Read and Close.
-;        }
+	tcp-port: redis-port/state/tcp-port
+	wait [tcp-port redis-port/spec/timeout]
+	clear tcp-port/locals
+	tcp-port/spec/redis-data
 ]
 
-async-handler: func [event /local port] [
-    port: event/port
-    print ["==TCP-event:" event/type]
+parse-dialect: funct [
+	"Get value of get-word! and get-path! and evaluate paren!"
+	dialect [block!]
+	/local body key
+][
+	parse body: copy dialect [
+		any [
+			change [set key [get-word! | get-path!] (key: get key)] key 
+		|	change [set key paren! (key: do key)] key 
+		|	skip 
+		]
+	]
+	body 
+]
 
+
+
+;===AWAKE HANDLER
+
+awake-handler: funct [
+	event
+	/local port
+][
+;	print ["Awake-event:" event/type]
+	port: event/port
 	switch/default event/type [
-		lookup [open event/port]
+		lookup [
+			open port
+		]
 		connect [
 			write event/port event/port/locals
 		]
-		wrote [read event/port]
+		wrote [
+			read port
+		]
 		read  [
-			print ["..Read" length? event/port/data "bytes"]
-			return true
+;			print ["^\read:" length? port/data]
+			port/spec/redis-data: copy port/data
+			clear port/data
+			return true 
 		]
 		close [
-			event/port/spec/port-state: 'closed
 			return true
 		]
 	] [
 		print ["Unexpected event:" event/type]
-		close event/port
+		close port
 		return true
 	]
 	false ; returned
@@ -304,24 +291,40 @@ redis-commands: [
 	zremrangebyscore zrevrange zrevrangebyscore zrevrank zscore zunionstore 
 ]
 
-send-redis-cmd: func [
-	"Send command to Redis server and parse response (synhronous)"
+write-key: funct [
 	redis-port	[port!]
-	data		[block!]	"Data to send. Words and paths are evaluated."
+	key
+	value
 ][
-;	print ["Send-redis-cmd:" data]
-	sync-write redis-port make-bulk-request data 
-;	probe 
-	parse-response redis-port/state/tcp-port/spec/redis-data
+	if all [path? key 2 = length? key] [
+		member: second key 
+		key: first key 
+	]
+	type: redis-type?/key redis-port key 
+	cmd: compose reduce/only case [
+		all [equal? type 'none block? value]			[ [RPUSH key (value)] ]
+		all [
+			equal? type 'none
+			any [object? value map? value]
+		][
+			 [HMSET key (flat-body-of value)]
+		]
+		equal? type 'none 								[ [SET key value] ]
+		equal? type 'string					 			[ [SET key value] ]
+		all [equal? type 'list integer? member]			[ [LSET key (member - 1) value] ]
+		all [equal? type 'hash member]					[ [HSET key member value] ]
+		equal? type 'set								[ [SADD key value] ]
+		all [equal? type 'zset member]					[ [ZADD key value member] ]
+	] redis-commands 
+	write redis-port cmd
 ]
 
-read-redis-key: funct [
+read-key: funct [
 	"Return raw key's value."
 	redis-port	[port!]
 	key			[any-string! any-word! any-path!]
 	/convert	"Convert data to Rebol type"
 ][
-;	print ["read-redis-key:" key]
 	member: none 
 	if all [path? key 2 = length? key][
 		member: second key 
@@ -344,10 +347,10 @@ read-redis-key: funct [
 		all [equal? type 'zset member]						[ post: 'score [ZSCORE key member] ]
 		equal? type 'zset									[ [ZRANGE key 0 -1] ]
 	] redis-commands 
-;	ret: either empty? cmd [none][send-redis-cmd redis-port cmd]
-	ret: either empty? cmd [none][sync-write redis-port make-bulk-request cmd]
+	ret: either empty? cmd [none][
+		write redis-port cmd
+	]
 	if all [ret convert] [
-		ret: parse-response ret
 		ret: switch/default post [
 			hash	[map block-string ret]
 			set		[to logic! ret]
@@ -367,33 +370,14 @@ do-redis: func [
 	; TODO
 ]
 
-sync-write: func [
-	"Synchronous write to Redis port"
-	redis-port [port!]
-	data 
-    /local tcp-port 
-] [
-	unless open? redis-port [open redis-port]
-	tcp-port: redis-port/state/tcp-port
-	tcp-port/awake: :awake-handler
-	either tcp-port/spec/port-state = 'ready [
-		write tcp-port to binary! data 
-	][
-		tcp-port/locals: copy data 
-	]
-	unless port? wait [tcp-port redis-port/spec/timeout] [
-		make-redis-error "redis timeout on tcp-port"
-	]
-	; NOTE: why the port cannot be closed here?
-	
-	; return Redis data
-	redis-port/state/tcp-port/spec/redis-data
-]
-
 sys/make-scheme [
     name: 'redis
 	title: "Redis Protocol"
-	spec: make system/standard/port-spec-net [port-id: 6379 timeout: 5]
+	spec: make system/standard/port-spec-net [
+		port-id:		6379 
+		timeout:		5
+		pipeline-limit:	1
+	]
 
 	actor: [
 	
@@ -407,13 +391,13 @@ sys/make-scheme [
 			redis-port [port!]
 			/local tcp-port 
 		][
-			print "OPEN port"
 			if redis-port/state [return redis-port]
 			if none? redis-port/spec/host [make-redis-error "Missing host address"]
 			redis-port/state: context [
-				tcp-port: none 
-				key: get-key redis-port 
-				index: none 
+				tcp-port:			none 
+				pipeline-length:	0
+				key: if redis-port/spec/path [load next redis-port/spec/path]
+				index:				none 
 			]
 			redis-port/state/tcp-port: tcp-port: make port! [
 				scheme: 'tcp
@@ -423,12 +407,10 @@ sys/make-scheme [
 				ref: rejoin [tcp:// host ":" port-id]
 				port-state: 'init
 				redis-data: none 
+				locals: make binary! 10000
 			]
-			comment {
-					port/state/tcp-port now looks like this
-					[ spec [object!] scheme [object!] actor awake state data locals ]
-			}
-			tcp-port/awake: :redis-port/awake ;none 
+			tcp-port/awake: :awake-handler ;:redis-port/awake ;none 
+;			pipeline-length: 0
 			open tcp-port 
 			redis-port 
 		]
@@ -436,48 +418,59 @@ sys/make-scheme [
 		close: func [
 			redis-port [port!]
 		][
-			close redis-port/state/tcp-port
-			redis-port/state: none 
+			if open? redis-port [
+				either redis-port/state/pipeline-length > 0 [
+					read redis-port
+				][
+					close redis-port/state/tcp-port
+					redis-port/state: none 
+				]	
+			]
 			redis-port 
 		]
 		
-		read: funct [
-			"Read from port (currently SYNC only)"
+		read: func [
+			"Read from port"
 			redis-port [port!]
+			/local key tcp-port
 		][
-			print "READ EVENT"
-			key: get-key open redis-port 
-			read-redis-key redis-port key
+			all [
+				redis-port/spec/path
+				open redis-port
+				return read-key redis-port redis-port/state/key
+			]
+			tcp-port: redis-port/state/tcp-port
+			wait [tcp-port redis-port/spec/timeout]
+			clear tcp-port/locals
+			redis-port/state/pipeline-length: 0
+			also tcp-port/spec/redis-data close redis-port
 		]
 		
 		write: func [
-			"Write to port (SYNC and ASYNC)"
+			"Write to pipeline"
 			redis-port [port!]
 			data [block! string! binary!]
-			/local tcp-port key ret
+			/local tcp-port size
 		][
-			either any-function? :redis-port/awake [
-				print "ASYNC"
-			;  --- ASYNCHRONOUS OPERATION
-				unless open? redis-port [cause-error 'Access 'not-open redis-port/spec/ref]
-				tcp-port: redis-port/state/tcp-port
-				either probe tcp-port/spec/port-state = 'ready [
-					write tcp-port to binary! make-bulk-request data 
-				][
-					tcp-port/locals: to binary! make-bulk-request data
-				]
+			unless open? redis-port [open redis-port]
+			if string? data [
+				data: reduce ['SET redis-port/state/key data]
+			]
+			redis-port/spec/path: none
+			tcp-port: redis-port/state/tcp-port
+			if none? tcp-port/locals [
+				; Init pipeline buffer (100 bytes for each command in automatic or basic mode, 1 000 000 bytes for manual mode
+				size: either zero? redis-port/spec/pipeline-limit [1'000'000][100 * redis-port/spec/pipeline-limit]
+				tcp-port/locals: make binary! size
+			]
+			append tcp-port/locals to binary! make-bulk-request parse-dialect data
+			redis-port/state/pipeline-length: redis-port/state/pipeline-length + 1
+			switch/default redis-port/spec/pipeline-limit [
+				0	[redis-port/state/pipeline-length]
+				1	[parse-response read redis-port]
 			][
-			;  --- SYNCHRONOUS OPERATION
-				key: get-key redis-port 
-				either all [not key block? data][
-					ret: send-redis-cmd redis-port data 
-				][
-					open redis-port 
-					ret: poke redis-port key data
-					close redis-port 
-				]
-				ret 
-			]		
+				if redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [parse-response read redis-port]
+			]
 		]	
 
 		query: func [
@@ -485,22 +478,29 @@ sys/make-scheme [
 			redis-port [port!]
 			/local key response 
 		][
-			key: get-key redis-port 
-			type: redis-type? redis-port 
+			all [
+				key: redis-port/spec/path 
+				key: load next key
+				redis-port/spec/path: none
+			] 
 			case [
-				none? key [ parse-server-info send-redis-cmd redis-port [ INFO ] ]	; TODO: query DB. What should it return? INFO?
+				none? key [
+					parse-server-info write redis-port [INFO]
+				]
 				true [
+					type: redis-type?/key redis-port key
 					reduce/no-set [
 						name: key 
 						size: (
-							response: switch/default type [
+							response: read-key/convert redis-port key
+							switch/default type [
 								'hash [length? response]
-							][read redis-port]
+							][response]
 							; TODO: move this condition to SWITCH block above
 							either integer? response [ response ][ length? response ]
 						)	
 						date: (
-							response: send-redis-cmd redis-port reduce [ 'TTL key ]
+							response: write redis-port [ TTL :key ]
 							switch/default response [
 								-1 [ none ]
 							][
@@ -509,32 +509,39 @@ sys/make-scheme [
 								local 
 							]
 						)
-;						type: ( to lit-word! send-redis-cmd redis-port reduce [ 'TYPE key ] )
-						type: type 
+						type: (type)
 					]
 				]
 			]
 		]
 		
-		delete: funct [
+		delete: func [
 			redis-port [port!]
+			/local key member index type cmd
 		][
-			key: get-key redis-port 
-			member: none 
-			if all [path? key 2 = length? key] [
-				member: second key 
-				key: first key 
+			all [
+				key: redis-port/spec/path 
+				key: load next key
+				redis-port/spec/path: none
+				path? key
+				set [key member index] to block! key
 			]
 			type: redis-type?/key redis-port key 
+;			print [type key member]
 			cmd: case [
 				none? key						[ [ FLUSHALL ] ]
-				all [member equal? type 'list]	[ [ LREM key 1 member ] ]	; TODO: delete redis://server/key/value/count 	???
-				all [member equal? type 'hash]	[ [ HDEL key member ] ]
-				all [member equal? type 'set]	[ [ SREM key member ] ]
-				all [member equal? type 'zset]	[ [ ZREM key member ] ]
-				true							[ [ DEL key ] ]
+				all [word? member equal? type 'list][ 
+					[ LREM :key :index :member ] 
+				]
+				all [pair? member equal? type 'list][
+					[ LTRIM :key (to integer! member/1) (to integer! member/2) ]
+				]
+				all [member equal? type 'hash]	[ [ HDEL :key :member ] ]
+				all [member equal? type 'set]	[ [ SREM :key :member ] ]
+				all [member equal? type 'zset]	[ [ ZREM :key :member ] ]
+				true							[ [ DEL :key ] ]
 			]
-			send-redis-cmd redis-port reduce/only cmd redis-commands 
+			write redis-port cmd
 		]
 
 		rename: funct [
@@ -544,188 +551,7 @@ sys/make-scheme [
 			redis-port: from 
 			from: last parse/all from/spec/path "/"
 			to: last parse/all to "/"
-			send-redis-cmd redis-port reduce ['RENAME from to]
-		]
-		
-; ===== series! actions
-		
-		append: funct [
-			redis-port [port!]
-			value 
-		][
-			unless key: get-key redis-port [make-redis-error "No key selected, SELECT key first."]
-			type: redis-type? redis-port 
-			cmd: case [
-				equal? type 'none		[[RPUSH key value]]
-				equal? type 'string		[[APPEND key value]]
-				equal? type 'list		[[RPUSH key value]]
-				equal? type 'hash		[[HMSET key (flat-body-of value)]]
-				equal? type 'set		[[SADD key value]]
-				equal? type 'zset		[[ZADD key (value)]]
-			]
-			send-redis-cmd redis-port compose reduce/only cmd redis-commands 
-		]
-		
-		insert: funct [
-			redis-port [port!]
-			value 
-		][
-			unless key: get-key redis-port [make-redis-error "No key selected, SELECT key first."]
-			type: redis-type? redis-port 			
-			cmd: case [
-				equal? type 'none		[[LPUSH key value]]
-;				equal? type 'string		[[]]		; --- there's no support in Redis for INSERT on strings
-				equal? type 'list		[[LPUSH key value]]
-				equal? type 'hash		[[HMSET key (flat-body-of value)]]				
-				equal? type 'set		[[SADD key value]]
-				equal? type 'zset		[[ZADD key (value)]]
-			]
-			send-redis-cmd redis-port compose reduce/only cmd redis-commands 
-		]
-		
-		remove: funct [
-			redis-port [port!]
-		][
-			unless key: get-key redis-port [make-redis-error "No key selected, SELECT key first."]
-			type: redis-type? redis-port 			
-			cmd: case [
-				equal? type 'none		[]
-;				equal? type 'string		[[]]		; --- there's no support in Redis for INSERT on strings
-				equal? type 'list		[[LPOP key]]
-				equal? type 'hash		[]				
-				equal? type 'set		[[SPOP key]]
-			]
-			send-redis-cmd redis-port reduce/only cmd redis-commands 
-		]
-		
-		find: func [
-			redis-port 
-			value 
-		][
-			print ["Find called with " value]
-			true 
-		]
-		
-		poke: funct [
-			redis-port 
-			key 		;  [ ANY-WORD! ANY-STRING! PATH! ]
-			value 
-		][
-			if all [path? key 2 = length? key] [
-				member: second key 
-				key: first key 
-			]
-			type: redis-type?/key redis-port key 
-			cmd: compose reduce/only case [
-				all [equal? type 'none block? value]			[ [RPUSH key (value)] ]
-				all [
-					equal? type 'none
-					any [object? value map? value]
-				][
-					 [HMSET key (flat-body-of value)]
-				]
-				equal? type 'none 								[ [SET key value] ]
-				equal? type 'string					 			[ [SET key value] ]
-				all [equal? type 'list integer? member]			[ [LSET key (member - 1) value] ]
-				all [equal? type 'hash member]					[ [HSET key member value] ]
-				equal? type 'set								[ [SADD key value] ]
-				all [equal? type 'zset member]					[ [ZADD key value member] ]
-			] redis-commands 
-			send-redis-cmd redis-port cmd 
-		]
-		
-		pick: funct [
-			redis-port 
-			key 
-		][
-			read-redis-key/convert redis-port key
-		]
-		
-		select: funct [
-			"Select key and return its value."
-			redis-port 
-			key 
-		][
-;			redis-port/spec/path: join #"/" key 
-			redis-port/state/key: key 
-			pick redis-port key 
-		]
-		
-		clear: funct [
-			"Clear selected key"
-			redis-port 
-		][
-			key: redis-port/state/key
-			type: redis-type? redis-port 
-			ret: case [
-				equal? type 'none	[[]]
-				equal? type 'string [
-					send-redis-cmd redis-port reduce ['SET key ""]
-					""
-				]
-				equal? type 'list	[
-					send-redis-cmd redis-port reduce ['LTRIM key 0 0]
-					send-redis-cmd redis-port reduce ['LPOP key]
-					[]
-				]
-				equal? type 'hash	[[]]
-				equal? type 'set	[[]]
-				equal? type 'zset	[[]]
-			] 
-		]
-		
-		length?: funct [
-			redis-port 
-		][
-			key: redis-port/state/key
-			type: redis-type? redis-port 
-			cmd: reduce/only case [
-				equal? type 'none	[[]]
-				equal? type 'string [[STRLEN key]]
-				equal? type 'list	[[LLEN key]]
-				equal? type 'hash	[[HLEN key]]
-				equal? type 'set	[[SCARD key]]
-				equal? type 'zset	[[ZCARD key]]
-			] redis-commands 
-			either empty? cmd [none][send-redis-cmd redis-port cmd]
-		]
-
-		change: funct [
-			redis-port 
-			value 
-		][
-			key: redis-port/state/key
-			index: redis-port/state/index
-			type: redis-type? redis-port 
-			cmd: reduce/only case [
-				equal? type 'none				[[]]
-				equal? type 'string 			[[SET key value]]
-;				all [index equal? type 'list]	[[]]
-				equal? type 'hash				[[]]
-				equal? type 'set				[[]]
-				equal? type 'zset				[[]]
-			] redis-commands 
-			either empty? cmd [none][send-redis-cmd redis-port cmd]		
-		]
-		
-		copy: funct [
-			redis-port 
-		][
-			pick redis-port redis-port/state/key
-		]
-		
-		at: funct [
-			redis-port 
-			index 
-		][
-			redis-port/state/index: either index [index][none]
-			redis-port 
-		]
-		
-		index?: funct [
-			redis-port 
-		][
-			redis-port/state/index
+			write redis-port [RENAME :from :to]
 		]
 	]
 ]
