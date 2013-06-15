@@ -50,6 +50,11 @@ Commands are send after pipeline limit is reached.
 **NOTE:** If you end the script and the queue is not empty, commands are **NOT** processed!
 You may force the procsessing with **WAIT** or **READ** in such situation.
 
+### Force-cmd?
+
+You can override pipeline limit with setting **redis-port/spec/force-cmd?** to **TRUE**.
+This will process pipeline on next **WRITE** and will reset **force-cmd** back to **FALSE**.
+
 ## Port functions
 
 ### OPEN
