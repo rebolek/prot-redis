@@ -383,7 +383,7 @@ sys/make-scheme [
 	title: "Redis Protocol"
 	spec: make system/standard/port-spec-net [
 		port-id:		6379 
-		timeout:		5
+		timeout:		0:05
 		pipeline-limit:	1
 	]
 

@@ -134,3 +134,11 @@
 ]
 ; force execution
 [5 = length? parse-reply read rp]
+
+; write 25 commands (two blocks by 10, rest manually)
+[
+	repeat i 25 [write rp [set (join "Štaflík" i) (join "Špagetka" i)]]
+	5 = rp/state/pipeline-length
+]
+; force execution
+[5 = length? parse-reply read rp]
