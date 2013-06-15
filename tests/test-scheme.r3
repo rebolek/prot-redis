@@ -142,3 +142,11 @@
 ]
 ; force execution
 [5 = length? parse-reply read rp]
+
+; FORCE-CMD? mode
+[rp/spec/force-cmd?: true]
+[parse-reply write rp [SET foo bar]]
+[
+	write rp [GET foo]
+	"bar" = parse-reply read rp
+]

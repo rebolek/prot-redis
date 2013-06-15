@@ -385,6 +385,7 @@ sys/make-scheme [
 		port-id:		6379 
 		timeout:		0:05
 		pipeline-limit:	1
+		force-cmd?:		false
 	]
 
 	actor: [
@@ -473,11 +474,20 @@ sys/make-scheme [
 			]
 			append tcp-port/locals make-bulk-request parse-dialect data
 			redis-port/state/pipeline-length: redis-port/state/pipeline-length + 1
-			switch/default redis-port/spec/pipeline-limit [
-				0	[redis-port/state/pipeline-length]
-				1	[read redis-port]
-			][
-				if redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [read redis-port]
+			case [
+				zero? redis-port/spec/pipeline-limit [
+					redis-port/state/pipeline-length
+				]
+				any [
+					redis-port/spec/force-cmd?
+					1 = redis-port/spec/pipeline-limit
+				][
+					redis-port/spec/force-cmd?: false
+					read redis-port
+				]
+				true [
+					if redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [read redis-port]
+				]
 			]
 		]	
 
