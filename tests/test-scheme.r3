@@ -104,10 +104,33 @@
 
 [
 	rp: open rs
-	rp/spec/pipeline-limit: 0
-	repeat i 10 [
-		write rp [set (join "foo" i) (join "bar" i)]
-	]
+	zero? rp/spec/pipeline-limit: 0
+]
+[
+	repeat i 10 [write rp [set (join "foo" i) (join "bar" i)]]
 	10 = rp/state/pipeline-length
 ]
-[binary? ret: read rp]
+[all parse-reply read rp]
+[
+	repeat i 10 [write rp [get (join "foo" i)]]
+	10 = length? parse-reply read rp
+]
+
+
+;================================================
+; AUTO mode
+
+; set limit to 10, write 10 commands
+
+[10 = rp/spec/pipeline-limit: 10]
+[
+	repeat i 10 [write rp [set (join "pat" i) (join "mat" i)]]
+	not rp/state
+]
+; send only 5 commands
+[
+	repeat i 5 [write rp [set (join "bob" i) (join "bobek" i)]]
+	5 = rp/state/pipeline-length
+]
+; force execution
+[5 = length? parse-reply read rp]
