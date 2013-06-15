@@ -118,11 +118,11 @@ For example, `SET foo bar` is same as `SET "foo" "bar"`.
 	>> write port [SET "key" "value"]
 	;; key: value	
 	>> write port [SET key :value]
-	.. key: bar
+	;; key: bar
 	>> write port [SET :key :value]
-	.. foo: bar
+	;; foo: bar
 	>> write port [SET key (1 + 1)]
-	.. key: 2
+	;; key: 2
 
 ####Why aren't word!s and path!s evaluated?
 

@@ -94,52 +94,59 @@ make-bulk-request: func [
 	]
 ]
 
-parse-response: func [
-	data [none! binary!]	"Response from Redis server"
-	/local get-response length-rule length bulk-length block result ret 
-] [
-	unless data [return none]
-	get-response: has [response] [parse to string! next data [copy response to newline] response]
-	length-rule: [
-		copy length to crlf ( 
-			length: to integer! to string! length 
-			if equal? -1 length [return none]
+parse-reply: func [
+	data
+	/binary	"Do not convert binary! to string!"
+	/local
+		message length status error integer bulk multi
+		msg ret
+][
+	ret: make block! min 1000 system/schemes/redis/spec/pipeline-limit
+	message: [
+		copy msg to crlf (unless binary [msg: to string! msg])
+		crlf
+	]
+	length: [
+		copy len to crlf ( 
+			len: load len 
+			if equal? -1 len [len: none]
 		)
 		crlf 
 	]
-	ret: switch/default to char! data/1 [
-		#"+" [get-response]				; STATUS reply
-		#"-" [make error! get-response]	; ERROR reply
-		#":" [to integer! get-response]	; INTEGER reply
-		#"$" [							; BULK replies
-			parse/all next data [
-				length-rule 
-				copy result length skip 
-				crlf 
-			]
-			result 
-		] 
-		#"*" [							; MULTI BULK replies
-			parse/all next data [
-				length-rule (
-					bulk-length: length
-					block: make block! length 
-				)
-				bulk-length [
-					"$" length-rule 
-					copy result length skip 
-					crlf ( append block result )
-				]
-			]
-			block 
-		]
-	][ret]
-	
-	switch/default ret [
-		"OK"		[true]
-	][
-		ret 
+	status: 	[
+		#"+" message (
+			msg: to string! msg
+			append ret either "OK" = msg [true][msg]
+		)
 	]
+	error:		[
+		#"-" message (
+			append ret make-redis-error to string! msg
+		)
+	]
+	integer:	[
+		#":" message (
+			append ret to integer! msg
+		)
+	]
+	bulk:		[
+		#"$" length
+		copy msg len skip
+		crlf (
+			unless binary [msg: to string! msg]
+			append ret msg
+		)
+	]
+	multi:		[
+		#"*" length (bulks: len)
+		bulks bulk
+	]
+	parse data [
+		some [
+			status | error | integer | bulk | multi
+		]
+	]
+	either single? ret [ret/1][ret]
 ]
 
 parse-server-info: funct [
@@ -193,7 +200,7 @@ redis-type?: funct [
 ][
 	unless key [name: get-key redis-port ]
 	if name [
-		to lit-word! write redis-port [ TYPE :name ]
+		to lit-word! parse-reply write redis-port [ TYPE :name ]
 	]
 ]
 
@@ -351,8 +358,9 @@ read-key: funct [
 		write redis-port cmd
 	]
 	if all [ret convert] [
+		ret: parse-reply ret
 		ret: switch/default post [
-			hash	[map block-string ret]
+			hash	[map ret]
 			set		[to logic! ret]
 			score	[load ret]
 		][
@@ -463,13 +471,13 @@ sys/make-scheme [
 				size: either zero? redis-port/spec/pipeline-limit [1'000'000][100 * redis-port/spec/pipeline-limit]
 				tcp-port/locals: make binary! size
 			]
-			append tcp-port/locals to binary! make-bulk-request parse-dialect data
+			append tcp-port/locals make-bulk-request parse-dialect data
 			redis-port/state/pipeline-length: redis-port/state/pipeline-length + 1
 			switch/default redis-port/spec/pipeline-limit [
 				0	[redis-port/state/pipeline-length]
-				1	[parse-response read redis-port]
+				1	[read redis-port]
 			][
-				if redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [parse-response read redis-port]
+				if redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [read redis-port]
 			]
 		]	
 
@@ -500,7 +508,7 @@ sys/make-scheme [
 							either integer? response [ response ][ length? response ]
 						)	
 						date: (
-							response: write redis-port [ TTL :key ]
+							response: parse-reply write redis-port [ TTL :key ]
 							switch/default response [
 								-1 [ none ]
 							][
@@ -522,12 +530,11 @@ sys/make-scheme [
 			all [
 				key: redis-port/spec/path 
 				key: load next key
-				redis-port/spec/path: none
+				none? redis-port/spec/path: none
 				path? key
 				set [key member index] to block! key
 			]
 			type: redis-type?/key redis-port key 
-;			print [type key member]
 			cmd: case [
 				none? key						[ [ FLUSHALL ] ]
 				all [word? member equal? type 'list][ 
@@ -541,7 +548,7 @@ sys/make-scheme [
 				all [member equal? type 'zset]	[ [ ZREM :key :member ] ]
 				true							[ [ DEL :key ] ]
 			]
-			write redis-port cmd
+			parse-reply write redis-port cmd
 		]
 
 		rename: funct [

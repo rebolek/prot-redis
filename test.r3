@@ -32,7 +32,7 @@ do %prot-redis.r3
 test-file %tests/test-scheme.r3 %prot-redis.r3
 change-dir home
 print "===Test actions"
-do %redis-actions.r3
-test-file %tests/test-actions.r3 %redis-actions.r3
+do %redis-actors.r3
+test-file %tests/test-actors.r3 %redis-actors.r3
 
 halt 
