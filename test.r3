@@ -31,8 +31,5 @@ print "===Test scheme"
 do %prot-redis.r3
 test-file %tests/test-scheme.r3 %prot-redis.r3
 change-dir home
-print "===Test actions"
-do %redis-actors.r3
-test-file %tests/test-actors.r3 %redis-actors.r3
 
 halt 

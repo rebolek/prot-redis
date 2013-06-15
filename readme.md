@@ -25,25 +25,26 @@ Pipelining is supported by this scheme and defines how the protocol will behave.
 ## Pipelining modes
 
 There are basicaly three different modes of operation and they are defined by the length of the pipeline.
-The length is stored in **redis/pipeline-limit**.
+The default length is stored in **system/schemes/redis/spec/pipeline-limit** 
+and port's current length in **redis-port/spec/pipeline-limit**
 Pipeline limit is number of commands that will be send in one batch.
 
-	>> redis/pipeline-limit
+	>> redis-port/spec/pipeline-limit
 	== 0
-	>> redis/pipeline-limit: 10'000
+	>> redis-port/spec/pipeline-limit: 10'000
 	== 10000
 
-### Manual mode: redis/pipeline-limit = 0
+### Manual mode: pipeline-limit = 0
 
 User is in charge of sending commands to **Redis** server.
 Commands must be processed with **WAIT** or **READ** (see below) functions.
 
-### Simple mode: redis/pipeline-limit = 1
+### Simple mode: pipeline-limit = 1
 
 Each command is processed individually. 
 To make things easier for beginners, this is default mode.
 
-### Automatic mode: redis/pipeline-limit > 1
+### Automatic mode: pipeline-limit > 1
 
 Commands are send after pipeline limit is reached.
 **NOTE:** If you end the script and the queue is not empty, commands are **NOT** processed!
@@ -70,7 +71,7 @@ In *Basic mode* **write** returns server's response as **binary!**.
 
 In *Manual* and *Automatic* modes **write** returns pipeline length as **integer!**.
 
-In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, **write** returns 0 and server's response is stored in **redis/data** (binary bulk data) and **redis/response** (parsed bulk data).
+In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, **write** returns 0.
 
 ### READ
 
