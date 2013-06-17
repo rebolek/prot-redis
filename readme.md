@@ -1,7 +1,7 @@
 # Redis scheme for Rebol3
 
 	Boleslav Březovský
-	11-6-2013
+	17-6-2013
 	
 # Introduction
 
@@ -25,41 +25,43 @@ Pipelining is supported by this scheme and defines how the protocol will behave.
 ## Pipelining modes
 
 There are basicaly three different modes of operation and they are defined by the length of the pipeline.
-The default length is stored in **system/schemes/redis/spec/pipeline-limit** 
-and port's current length in **redis-port/spec/pipeline-limit**
+The length is stored in **redis/pipeline-limit**.
 Pipeline limit is number of commands that will be send in one batch.
 
-	>> redis-port/spec/pipeline-limit
+	>> redis/pipeline-limit
 	== 0
-	>> redis-port/spec/pipeline-limit: 10'000
+	>> redis/pipeline-limit: 10'000
 	== 10000
 
-### Manual mode: pipeline-limit = 0
+### Manual mode: redis/pipeline-limit = 0
 
 User is in charge of sending commands to **Redis** server.
 Commands must be processed with **WAIT** or **READ** (see below) functions.
 
-### Simple mode: pipeline-limit = 1
+### Simple mode: redis/pipeline-limit = 1
 
 Each command is processed individually. 
 To make things easier for beginners, this is default mode.
 
-### Automatic mode: pipeline-limit > 1
+### Automatic mode: redis/pipeline-limit > 1
 
 Commands are send after pipeline limit is reached.
 **NOTE:** If you end the script and the queue is not empty, commands are **NOT** processed!
 You may force the procsessing with **WAIT** or **READ** in such situation.
-
-### Force-cmd?
-
-You can override pipeline limit with setting **redis-port/spec/force-cmd?** to **TRUE**.
-This will process pipeline on next **WRITE** and will reset **force-cmd** back to **FALSE**.
 
 ## Port functions
 
 ### OPEN
 
 Open **Redis** port and clear command pipeline.
+
+	>> redis-port: open redis://192.168.1.1
+
+
+###OPEN?
+
+Returns `TRUE` when port is open.
+
 
 ### WRITE
 
@@ -76,7 +78,7 @@ In *Basic mode* **write** returns server's response as **binary!**.
 
 In *Manual* and *Automatic* modes **write** returns pipeline length as **integer!**.
 
-In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, **write** returns 0.
+In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, **write** returns 0 and server's response is stored in **redis/data** (binary bulk data) and **redis/response** (parsed bulk data).
 
 ### READ
 
@@ -103,6 +105,65 @@ This is prefered mode of operations.
 	>> write redis://redis-server [SET foo bar]
 	>> read redis://redis-server
 	== #{2B4F4B0D0A}
+
+###READ
+
+**READ** returns raw value of key as **binary!** in (multi)bulk format.
+You can decode the data with **parse-response** function.
+**READ** does check on key's type and sends appropriate command.
+
+	>> write redis://192.168.1.1/foo "bar"
+	>> read redis://192.168.1.1/foo
+	== #{24330D0A6261720D0A}
+	>> to string! parse-response read redis://192.168.1.1/foo
+	== "bar"
+
+
+###QUERY - return informations about key
+
+	>> query redis://192.168.1.1
+	>> query redis://192.168.1.1/foo
+	
+Return informations about key as object!.
+
+	name -> key name
+	size -> key size (length of string or number of members)
+	date -> expiration date or none!
+	type -> Redis datatype
+
+
+###DELETE
+
+Delete key or member in key or whole database.
+
+Delete whole database - `FLUSHALL`:
+
+	>> delete redis://192.168.1.1
+
+Delete one key - `REMOVE`:
+
+	>> delete redis://192.168.1.1/foo
+
+Delete first member in list:
+
+	>> delete redis://192.168.1.1/foo/1
+
+###CLOSE
+
+Close port.
+
+###CREATE
+
+No information yet.
+
+###RENAME
+
+No information yet.
+
+###UPDATE
+
+No information yet.
+
 
 ## Redis dialect
 
