@@ -1,109 +1,92 @@
 REBOL[]
 
-count: 1
 rs: redis://192.168.211.10
+;rs: redis://127.0.0.1
 
-do %prot-redis.r3
+do %../prot-redis.r3
 
-probe dt [loop count [write rs/randkey "asdf"]]
-probe dt [rp: open rs loop count [poke rp 'randkey "asdf"] close rp]
-probe dt [loop count [write rs [SET randkey "asdf"]]]
-probe dt [rp: open rs loop count [send-redis-cmd rp [SET randkey "asdf"]] close rp]
-print "direct 1"
-probe dt [
+log-data: make string! 4000
+log: func [data][
+	append log-data probe data
+	append log-data newline
+]
+
+log "set 100 keys (one by one)"
+count: 100
+log dt [
+	repeat i count [
+		write rs [SET (join "key" i) (join "value" i)]
+	]
+]
+
+log "set 1000 keys (one by one)"
+count: 1000
+log dt [
+	repeat i count [
+		write rs [SET (join "key" i) (join "value" i)]
+	]
+]
+
+log "run for one second"
+nt: now/time/precise
+i: 0
+until [
+	i: i + 1
+	write rs [SET (join "key" i) (join "value" i)]
+	(now/time/precise - nt) > 0:0:1
+]
+log rejoin ["Processed " i " keys."]
+
+count: 10000
+log "set 10000 keys (pipleline-limit = 1000)"
+log dt [
 	rp: open rs
-	tcp-port: rp/state/tcp-port
-	tcp-port/awake: :awake-handler
-	loop count [
-		either tcp-port/spec/port-state = 'ready [
-			write tcp-port to binary! {SET randkey asdf}
-		][
-			tcp-port/locals: copy {SET randkey asdf}
-		]
-		parse-response rp/state/tcp-port/spec/redis-data
-		
+	rp/spec/pipeline-limit: 1000
+	repeat i count [
+		write rp [SET (join "key" i) (join "value" i)]
 	]
-	close rp	
 ]
 
-print "direct 2."
-rwrite: funct [
-	rp
-	data
-][
-	data: make-bulk-request data
-	tcp-port: rp/state/tcp-port
-	tcp-port/awake: :awake-handler
-	either tcp-port/spec/port-state = 'ready [
-		write tcp-port to binary! data
-	][
-		tcp-port/locals: copy data
-	]
-	unless port? wait [tcp-port rp/spec/timeout] [make-redis-error "redis timeout on tcp-port"]
-	probe parse-response rp/state/tcp-port/spec/redis-data
-]
-probe dt [
-	rp: open rs	
-	loop count [rwrite rp [SET randkey asdf]]
-	close rp	
-]
-
-print "direct 2(no wait)."
-rwrite: funct [
-	rp
-	data
-][
-	data: make-bulk-request data
-	tcp-port: rp/state/tcp-port
-	tcp-port/awake: :awake-handler
-	either tcp-port/spec/port-state = 'ready [
-		write tcp-port to binary! data
-	][
-		tcp-port/locals: copy data
-	]
-;	unless port? wait [tcp-port rp/spec/timeout] [make-redis-error "redis timeout on tcp-port"]
-	probe parse-response rp/state/tcp-port/spec/redis-data
-]
-probe dt [
-	rp: open rs	
-	loop count [rwrite rp [SET randkey asdf]]
-	close rp	
-]
-
-print "bulk request"
-probe dt [
+log "set 10000 keys (pipleline-limit = 10000)"
+log dt [
 	rp: open rs
-	tcp-port: rp/state/tcp-port
-	tcp-port/awake: :awake-handler
-	loop count [
-		either tcp-port/spec/port-state = 'ready [
-			write tcp-port to binary! make-bulk-request [SET randkey asdf]
-		][
-			tcp-port/locals: copy make-bulk-request [SET randkey asdf]
-		]
-		parse-response rp/state/tcp-port/spec/redis-data
-		
+	rp/spec/pipeline-limit: 10000
+	repeat i count [
+		write rp [SET (join "key" i) (join "value" i)]
 	]
-	close rp	
 ]
 
-probe dt [loop count [read rs/randkey]]
-probe dt [rp: open rs loop count [pick rp 'randkey] close rp]
-probe dt [loop count [write rs [GET randkey]]]
-probe dt [rp: open rs loop count [send-redis-cmd rp [GET randkey]] close rp]
-probe dt [
+log "set 10000 keys (pipleline-limit = 0)"
+log dt [
 	rp: open rs
-	tcp-port: rp/state/tcp-port
-	tcp-port/awake: :awake-handler
-	loop count [
-		either tcp-port/spec/port-state = 'ready [
-			write tcp-port to binary! {GET randkey}
-		][
-			tcp-port/locals: copy {GET randkey}
-		]
-		parse-response rp/state/tcp-port/spec/redis-data
-		
+	rp/spec/pipeline-limit: 0
+	repeat i count [
+		write rp [SET (join "key" i) (join "value" i)]
 	]
-	close rp	
+	read rp
 ]
+
+log "set 100000 keys (pipleline-limit = 0)"
+log dt [
+	rp: open rs
+	rp/spec/pipeline-limit: 0
+	count: 100000
+	repeat i count [
+		write rp [SET (join "key" i) (join "value" i)]
+	]
+	read rp
+]
+
+log "set 100000 keys (pipleline-limit = 10000)"
+log dt [
+	rp: open rs
+	rp/spec/pipeline-limit: 10000
+	count: 100000
+	repeat i count [
+		write rp [SET (join "key" i) (join "value" i)]
+	]
+]
+
+
+write %speed-result.txt log-data
 halt 
