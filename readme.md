@@ -196,3 +196,15 @@ For example, `SET foo bar` is same as `SET "foo" "bar"`.
 **Word!**s and **path!**s are not evaluated, to get their values you need to use **get-word!** or **get-path!** notation. This has its reasons. In **Redis**, composed keys in form of `user:1:name` are often used. Of course you are free to use this type of keys, but because this is **Rebol** client library, you have option to use `user/1/name` instead. This ways keys can be mapped directly to **Rebol** values on demand. 
 
 Also, using **path!** is ***much*** faster than working with **string!**. **make path! [user 1 name]** runs about 8-9 faster than **rejoin ["user" 1 "name"]** on my machine.
+
+
+## Awake handler and callbacks
+
+Because all Rebol3 ports are asynchronous by nature, if you want to execute your custom code, you need to change **AWAKE** handler. However because you mostly need to change **READ** actor, Redis scheme provides **SET-CALLBACK** function that will add your code to the **READ** without need for rewriting whole **AWAKE** handler.
+
+### Usage
+
+Pass port and function accepting one argument (**port!**) to **SET-CALLBACK**:
+
+	>> port: open redis://redis-server
+	>> set-callback port func [port][probe port/data] 

@@ -1,26 +1,16 @@
 REBOL [
-    Title: "redis"
+    Title: "Redis protocol"
     File: %prot-redis.r3
-    Date: 14-6-2013
+    Date: 18-6-2013
 	Created: 30-3-2013
-    Version: 0.1.9
+    Version: 0.2.0
     Author: "Boleslav Březovský"
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
-		"`delete redis://192.168.1.1/list/1` to remove one member"
-		"length? and other series actions should require key (redis://server/key)"
 	]
 	Notes: [
-{WRITE -
-	WRITE block!	parse dialect and convert all Rebol values to Redis types
-	WRITE string!	direct access (not yet implemented)
-	WRITE binary!	write RAW bulk data
-	
-WRITE block! and binary! ignores path (key) - TODO: should it select database?	
-}	
 	]
 	Bugs: [
-		"read server/non-existent-key returns list of keys instead of none"
 	]
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
@@ -256,7 +246,7 @@ awake-handler: funct [
 			open port
 		]
 		connect [
-			write event/port event/port/locals
+			write port port/locals
 		]
 		wrote [
 			read port
@@ -264,6 +254,7 @@ awake-handler: funct [
 		read  [
 ;			print ["^\read:" length? port/data]
 			port/spec/redis-data: copy port/data
+			if :port/spec/callback [port/spec/callback port]
 			clear port/data
 			return true 
 		]
@@ -277,6 +268,20 @@ awake-handler: funct [
 	]
 	false ; returned
 ]
+
+	; TODO: support more callbacks, add remove callback, list callbacks
+	
+
+set-callback: func [
+	"Set callback function"
+	port		[port!]
+	callback	[function!]
+][
+	if open? port [
+		port/state/tcp-port/spec/callback: :callback
+	]
+]
+
 
 redis-commands: [
 	append auth bgrewriteaof bgsave bitcount bitop blpop brpop brpoplpush 
@@ -370,14 +375,6 @@ read-key: funct [
 	ret
 ] 
 
-do-redis: func [
-	"Open Redis port, send all commands in data block and close port."
-	redis-port	[port!]
-	data		[block!]	"Redis commands to proceed"
-][
-	; TODO
-]
-
 sys/make-scheme [
     name: 'redis
 	title: "Redis Protocol"
@@ -386,8 +383,9 @@ sys/make-scheme [
 		timeout:		0:05
 		pipeline-limit:	1
 		force-cmd?:		false
+		callback: none
 	]
-
+	
 	actor: [
 	
 		open?: func [
@@ -417,9 +415,9 @@ sys/make-scheme [
 				port-state: 'init
 				redis-data: none 
 				locals: make binary! 10000
+				callback: :redis-port/spec/callback
 			]
 			tcp-port/awake: :awake-handler ;:redis-port/awake ;none 
-;			pipeline-length: 0
 			open tcp-port 
 			redis-port 
 		]
