@@ -5,10 +5,12 @@
 	
 # Introduction
 
-This script provides Redis scheme for Rebol3. [Redis](http://www.redis.io) is key/value (NoSQL) database.
+This script provides Redis scheme for Rebol3. [Redis](http://www.redis.io) 
+is key/value (NoSQL) database.
 Rebol3 is newest version of [Rebol](http://www.rebol.com) programming language.
 This script implements Redis as standard Rebol protocol that can be accessed using **redis://redis-server** notation.
-Redis protocol uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test) for unit testing and is released under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0.html).
+Redis protocol uses [Ladislav's test framework](https://github.com/rebolsource/rebol-test) 
+for unit testing and is released under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 # How does it work?
 
@@ -58,7 +60,7 @@ Open **Redis** port and clear command pipeline.
 	>> redis-port: open redis://192.168.1.1
 
 
-###OPEN?
+### OPEN?
 
 Returns `TRUE` when port is open.
 
@@ -72,13 +74,14 @@ When the pipeline limit is reached, commands are send to the server.
 	>> write rs [SET foo 1]
 	>> write rs [INCR foo]
 
-**Write** has three modes of operations: basic, manual and automatic (see the pipelining modes).#
+**Write** has three modes of operations: basic, manual and automatic (see the pipelining modes).
 
 In *Basic mode* **write** returns server's response as **binary!**.
 
 In *Manual* and *Automatic* modes **write** returns pipeline length as **integer!**.
 
-In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, **write** returns 0 and server's response is stored in **redis/data** (binary bulk data) and **redis/response** (parsed bulk data).
+In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, 
+**write** returns 0 and server's response is stored in **redis/data** (binary bulk data) and **redis/response** (parsed bulk data).
 
 ### READ
 
@@ -106,7 +109,7 @@ This is prefered mode of operations.
 	>> read redis://redis-server
 	== #{2B4F4B0D0A}
 
-###READ
+### READ
 
 **READ** returns raw value of key as **binary!** in (multi)bulk format.
 You can decode the data with **parse-response** function.
@@ -119,7 +122,7 @@ You can decode the data with **parse-response** function.
 	== "bar"
 
 
-###QUERY - return informations about key
+### QUERY
 
 	>> query redis://192.168.1.1
 	>> query redis://192.168.1.1/foo
@@ -132,7 +135,7 @@ Return informations about key as object!.
 	type -> Redis datatype
 
 
-###DELETE
+### DELETE
 
 Delete key or member in key or whole database.
 
@@ -193,14 +196,39 @@ For example, `SET foo bar` is same as `SET "foo" "bar"`.
 
 ####Why aren't word!s and path!s evaluated?
 
-**Word!**s and **path!**s are not evaluated, to get their values you need to use **get-word!** or **get-path!** notation. This has its reasons. In **Redis**, composed keys in form of `user:1:name` are often used. Of course you are free to use this type of keys, but because this is **Rebol** client library, you have option to use `user/1/name` instead. This ways keys can be mapped directly to **Rebol** values on demand. 
+**Word!**s and **path!**s are not evaluated, to get their values 
+you need to use **get-word!** or **get-path!** notation. 
+This has its reasons. In **Redis**, composed keys in form of `user:1:name` 
+are often used. Of course you are free to use this type of keys, 
+but because this is **Rebol** client library, you have option 
+to use `user/1/name` instead. This ways keys can be mapped directly 
+to **Rebol** values on demand. 
 
-Also, using **path!** is ***much*** faster than working with **string!**. **make path! [user 1 name]** runs about 8-9 faster than **rejoin ["user" 1 "name"]** on my machine.
+Also, using **path!** is ***much*** faster than working with **string!**. 
+**make path! [user 1 name]** runs about 8-9 faster than **rejoin ["user" 1 "name"]** on my machine.
+
+## Other functions
+
+### SEND-REDIS
+
+**SEND-REDIS** is a shorthand for `parse-reply write port data`. 
+It sends request to **Redis** server and parses bulk reply.
+
+	>> send-redis port [SET key value]
+	== true
+	>> send-redis port [GET key]       
+	== "value"
+	>> send-redis/binary port [GET key]
+	== #{76616C7565}
 
 
 ## Awake handler and callbacks
 
-Because all Rebol3 ports are asynchronous by nature, if you want to execute your custom code, you need to change **AWAKE** handler. However because you mostly need to change **READ** actor, Redis scheme provides **SET-CALLBACK** function that will add your code to the **READ** without need for rewriting whole **AWAKE** handler.
+Because all Rebol3 ports are asynchronous by nature, if you want to execute 
+your custom code, you need to change **AWAKE** handler. However because 
+you mostly need to change **READ** actor, Redis scheme provides 
+**SET-CALLBACK** function that will add your code to the **READ** 
+without need for rewriting whole **AWAKE** handler.
 
 ### Usage
 
