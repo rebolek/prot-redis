@@ -33,9 +33,9 @@ import it using `import` function.
 
 The module exports following functions:
 
-*send-redis 
-*write-key 
-*read-key 
+* send-redis 
+* write-key 
+* read-key 
 
 See below for detailed description of each command.
 
