@@ -1,9 +1,9 @@
 REBOL [
     Title: "Redis protocol"
     File: %prot-redis.r3
-    Date: 18-6-2013
+    Date: 27-12-2013
 	Created: 30-3-2013
-    Version: 0.2.0
+    Version: 0.3.0
     Author: "Boleslav Březovský"
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
@@ -12,6 +12,10 @@ REBOL [
 	]
 	Bugs: [
 	]
+	Type: 'module
+	Name: 'prot-redis
+	Exports: [send-redis write-key read-key get-key redis-type?]
+	Options: [isolate]
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
 
@@ -90,8 +94,11 @@ make-bulk-request: func [
 send-redis: func [
 	port
 	data
+	/binary "Do not convert binary! to string!"
+	/local
 ] [
-	parse-reply write port data
+	local: write port data
+	apply :parse-reply [ local binary ]
 ]
 
 parse-reply: func [
