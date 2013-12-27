@@ -24,6 +24,21 @@ To prevent this problem, **Redis** supports [pipelining](http://redis.io/topics/
 In pipelined mode the client can send more commands in one batch instead off sending one command at time.
 Pipelining is supported by this scheme and defines how the protocol will behave.
 
+# Usage
+
+**Redis** protocol is implemented as **REBOL 3** module. To use it, 
+import it using `import` function.
+
+	>> import %prot.redis.r3
+
+The module exports following functions:
+
+*send-redis 
+*write-key 
+*read-key 
+
+See below for detailed description of each command.
+
 ## Pipelining modes
 
 There are basicaly three different modes of operation and they are defined by the length of the pipeline.
@@ -207,7 +222,10 @@ to **Rebol** values on demand.
 Also, using **path!** is ***much*** faster than working with **string!**. 
 **make path! [user 1 name]** runs about 8-9 faster than **rejoin ["user" 1 "name"]** on my machine.
 
-## Other functions
+## Exported functions
+
+**Redis** protocol is implemented as **REBOL 3** module that exposes
+following functions to user:
 
 ### SEND-REDIS
 
@@ -221,6 +239,15 @@ It sends request to **Redis** server and parses bulk reply.
 	>> send-redis/binary port [GET key]
 	== #{76616C7565}
 
+### WRITE-KEY
+
+Write value to **Redis** key. Function automatically selects appropriate
+**Redis** command based on key and/or value datatypes.
+
+### READ-KEY
+
+Read value from **Redis** key. Function automatically selects appropriate
+**Redis** command based on key datatype.
 
 ## Awake handler and callbacks
 
