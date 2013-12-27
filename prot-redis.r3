@@ -14,7 +14,7 @@ REBOL [
 	]
 	Type: 'module
 	Name: 'prot-redis
-	Exports: [send-redis write-key read-key get-key redis-type?]
+	Exports: [send-redis write-key read-key]
 	Options: [isolate]
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
