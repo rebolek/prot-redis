@@ -66,7 +66,10 @@ make-bulk: func [
 	/local out
 ] [
 	out: make binary! 64
-	data: to binary! form data ; TODO: does it support all datatypes?
+;	data: to binary! form data ; TODO: does it support all datatypes?
+	data: switch/default type?/word data [
+		binary!		[ data ]
+	][ to binary! form data ]
 	repend out [
 		"$" to string! length? data crlf 
 		data crlf 
@@ -84,13 +87,20 @@ make-bulk-request: func [
 	]
 ]
 
+send-redis: func [
+	port
+	data
+] [
+	parse-reply write port data
+]
+
 parse-reply: func [
 	data
 	/binary	"Do not convert binary! to string!"
 	/local
 		message length status error integer bulk multi
 		msg ret
-][
+] [
 	ret: make block! min 1000 system/schemes/redis/spec/pipeline-limit
 	message: [
 		copy msg to crlf (unless binary [msg: to string! msg])
@@ -119,6 +129,11 @@ parse-reply: func [
 			append ret to integer! msg
 		)
 	]
+	no-data:	[
+		"$-1" crlf (
+			append ret none
+		)
+	]
 	bulk:		[
 		#"$" length
 		copy msg len skip
@@ -133,7 +148,7 @@ parse-reply: func [
 	]
 	parse data [
 		some [
-			status | error | integer | bulk | multi
+			status | error | integer | no-data | bulk | multi
 		]
 	]
 	either single? ret [ret/1][ret]
@@ -219,12 +234,13 @@ process-pipeline: func [
 parse-dialect: funct [
 	"Get value of get-word! and get-path! and evaluate paren!"
 	dialect [block!]
-	/local body key
+	/local body key p
 ][
-	parse body: copy dialect [
+	parse body: copy/deep dialect [
 		any [
 			change [set key [get-word! | get-path!] (key: get key)] key 
-		|	change [set key paren! (key: do key)] key 
+;		|	change [set key paren! (key: do key)] key 
+		|	p: set key paren! ( p/1: do key )
 		|	skip 
 		]
 	]
