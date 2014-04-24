@@ -29,7 +29,7 @@ Pipelining is supported by this scheme and defines how the protocol will behave.
 **Redis** protocol is implemented as **REBOL 3** module. To use it, 
 import it using `import` function.
 
-	>> import %prot.redis.r3
+	>> import %prot.redis.reb
 
 The module exports following functions:
 

@@ -1,16 +1,45 @@
 REBOL [
     Title: "Redis protocol"
-    File: %prot-redis.r3
-    Date: 27-12-2013
+    File: %prot-redis.reb
+    Date: 24-4-2014
 	Created: 30-3-2013
-    Version: 0.3.0
+    Version: 0.3.1
     Author: "Boleslav Březovský"
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
+		{Sharding:
+* need to setup nodes - must define with some function (SET-REDIS-NODES
+	or something like that)
+	SET-REDIS-NODES [localhost]						; one node on default port
+	SET-REDIS-NODES [localhost:7000]				; one node on selected port
+	SET-REDIS-NODES [localhost:7000 localhost:7001] ; two nodes on selected ports
+	SET-REDIS-NODES [localhost 7000 .. 7009]		; ten nodes from first to last port
+	SET-REDIS-NODES [192.168.1.100 192.168.1.110]	; two nodes on default ports
+	SET-REDIS-NODES [192.168.1.100:7000 192.168.1.110:8000] ; two nodes on selected ports
+	SET-REDIS-NODES [192.168.1.100 7000 .. 7009 192.168.1.200 7000 .. 7009 ] ; twenty nodes on two ranges
+	etc ...
+
+	SET-REDIS-NODES/APPEND - add new node to existing pool
+	SET-REDIS-NODES/REMOVE - remove node from existing pool
+
+* when there's more than one Redis node, the protocol will shard keys -
+	split them to different nodes. Basic sharding is done this way:
+
+	redis-node: checksum/hash to binary! key length? redis-nodes
+
+	this function can be replaced with custom one.
+		}
 	]
 	Notes: [
 	]
 	Bugs: [
+{
+>> user-key: first [vske/user/1]         
+== vske/user/1
+
+>> send-redis rp [HGET :user-key 'name] 
+** Access error: protocol error: "ERR wrong number of arguments for 'hget' command"
+}
 	]
 	Type: 'module
 	Name: 'prot-redis
@@ -29,11 +58,11 @@ flat-body-of: funct [
 ][
 	parse body: body-of object [
 		any [
-			change [set key set-word! (key: to word! key)] key 
-		|	skip 
+			change [set key set-word! (key: to word! key)] key
+		|	skip
 		]
 	]
-	body 
+	body
 ]
 
 block-string: funct [
@@ -42,11 +71,11 @@ block-string: funct [
 ][
 	parse data [
 		any [
-			change [set value binary! (value: to string! value)] value 
-		|	skip 
+			change [set value binary! (value: to string! value)] value
+		|	skip
 		]
 	]
-	data 
+	data
 ]
 
 get-key: funct [
@@ -75,8 +104,8 @@ make-bulk: func [
 		binary!		[ data ]
 	][ to binary! form data ]
 	repend out [
-		"$" to string! length? data crlf 
-		data crlf 
+		"$" to string! length? data crlf
+		data crlf
 	]
 ]
 
@@ -86,8 +115,8 @@ make-bulk-request: func [
 ] [
 	out: make binary! 64 * 32
 	repend out rejoin [ "*"	to string! length? args crlf ]
-	append out collect [ 
-		foreach arg args [keep make-bulk arg] 
+	append out collect [
+		foreach arg args [keep make-bulk arg]
 	]
 ]
 
@@ -114,11 +143,11 @@ parse-reply: func [
 		crlf
 	]
 	length: [
-		copy len to crlf ( 
-			len: load len 
+		copy len to crlf (
+			len: load len
 			if equal? -1 len [len: none]
 		)
-		crlf 
+		crlf
 	]
 	status: 	[
 		#"+" message (
@@ -163,14 +192,14 @@ parse-reply: func [
 
 parse-server-info: funct [
 	"Parse return of INFO command"
-	data 
+	data
 ][
 	obj: object []
-	section: word: value: none 
+	section: word: value: none
 	body: copy []
 	chars: charset [#"a" - #"z" #"A" - #"Z" #"_" #"=" #"," #"." #"-" #" "]
 	integer: charset [#"0" - #"9"]
-	alphanum: union chars integer 
+	alphanum: union chars integer
 	dot: #"."
 	minus: #"-"
 	parse to string! data [
@@ -183,7 +212,7 @@ parse-server-info: funct [
 				|	some integer dot some integer [#"K" | #"M" | #"G"] (type: 'number)
 				|	some integer dot some integer (type: decimal!)
 				|	opt minus some integer	(type: integer!)
-				|	some alphanum	
+				|	some alphanum
 				] (
 					if equal? type 'number [
 						value: switch take/last value [
@@ -199,7 +228,7 @@ parse-server-info: funct [
 			] (
 				repend obj [to set-word! section make object! body]
 			)
-			newline 
+			newline
 		]
 	]
 	obj
@@ -217,13 +246,13 @@ redis-type?: funct [
 ]
 
 make-redis-error: func [
-	message 
+	message
 ] [
 	; the 'do arms the error!
 	do make error! [
 		type: 'Access
 		id: 'Protocol
-		arg1: message 
+		arg1: message
 	]
 ]
 
@@ -245,13 +274,13 @@ parse-dialect: funct [
 ][
 	parse body: copy/deep dialect [
 		any [
-			change [set key [get-word! | get-path!] (key: get key)] key 
-;		|	change [set key paren! (key: do key)] key 
+			change [set key [get-word! | get-path!] (key: get key)] key
+;		|	change [set key paren! (key: do key)] key
 		|	p: set key paren! ( p/1: do key )
-		|	skip 
+		|	skip
 		]
 	]
-	body 
+	body
 ]
 
 
@@ -279,7 +308,7 @@ awake-handler: funct [
 			port/spec/redis-data: copy port/data
 			if :port/spec/callback [port/spec/callback port]
 			clear port/data
-			return true 
+			return true
 		]
 		close [
 			return true
@@ -293,7 +322,7 @@ awake-handler: funct [
 ]
 
 	; TODO: support more callbacks, add remove callback, list callbacks
-	
+
 
 set-callback: func [
 	"Set callback function"
@@ -307,23 +336,23 @@ set-callback: func [
 
 
 redis-commands: [
-	append auth bgrewriteaof bgsave bitcount bitop blpop brpop brpoplpush 
-	client-kill client-list client-getname client-setname config-get 
-	config-set config-resetstat dbsize debug-object debug-segfault decr 
-	decrby del discard dump echo eval evalsha exec exists expire expireat 
-	flushall flushdb get getbit getrange getset hdel hexists hget hgetall 
-	hincrby hincrbyfloat hkeys hlen hmget hmset hset hsetnx hvals incr 
-	incrby incrbyfloat info keys lastsave lindex linsert llen lpop lpush 
-	lpushx lrange lrem lset ltrim mget migrate monitor move mset msetnx 
-	multi object persist pexpire pexpireat ping psetex psubscribe pttl 
-	publish punsubscribe quit randomkey rename renamenx restore rpop 
-	rpoplpush rpush rpushx sadd save scard script-exists script-flush 
-	script-kill script-load sdiff sdiffstore select set setbit setex setnx 
-	setrange shutdown sinter sinterstore sismember slaveof slowlog smembers 
-	smove sort spop srandmember srem strlen subscribe sunion sunionstore 
-	sync time ttl type unsubscribe unwatch watch zadd zcard zcount zincrby 
-	zinterstore zrange zrangebyscore zrank zrem zremrangebyrank 
-	zremrangebyscore zrevrange zrevrangebyscore zrevrank zscore zunionstore 
+	append auth bgrewriteaof bgsave bitcount bitop blpop brpop brpoplpush
+	client-kill client-list client-getname client-setname config-get
+	config-set config-resetstat dbsize debug-object debug-segfault decr
+	decrby del discard dump echo eval evalsha exec exists expire expireat
+	flushall flushdb get getbit getrange getset hdel hexists hget hgetall
+	hincrby hincrbyfloat hkeys hlen hmget hmset hset hsetnx hvals incr
+	incrby incrbyfloat info keys lastsave lindex linsert llen lpop lpush
+	lpushx lrange lrem lset ltrim mget migrate monitor move mset msetnx
+	multi object persist pexpire pexpireat ping psetex psubscribe pttl
+	publish punsubscribe quit randomkey rename renamenx restore rpop
+	rpoplpush rpush rpushx sadd save scard script-exists script-flush
+	script-kill script-load sdiff sdiffstore select set setbit setex setnx
+	setrange shutdown sinter sinterstore sismember slaveof slowlog smembers
+	smove sort spop srandmember srem strlen subscribe sunion sunionstore
+	sync time ttl type unsubscribe unwatch watch zadd zcard zcount zincrby
+	zinterstore zrange zrangebyscore zrank zrem zremrangebyrank
+	zremrangebyscore zrevrange zrevrangebyscore zrevrank zscore zunionstore
 ]
 
 write-key: funct [
@@ -332,10 +361,10 @@ write-key: funct [
 	value
 ][
 	if all [path? key 2 = length? key] [
-		member: second key 
-		key: first key 
+		member: second key
+		key: first key
 	]
-	type: redis-type?/key redis-port key 
+	type: redis-type?/key redis-port key
 	cmd: compose reduce/only case [
 		all [equal? type 'none block? value]			[ [RPUSH key (value)] ]
 		all [
@@ -350,7 +379,7 @@ write-key: funct [
 		all [equal? type 'hash member]					[ [HSET key member value] ]
 		equal? type 'set								[ [SADD key value] ]
 		all [equal? type 'zset member]					[ [ZADD key value member] ]
-	] redis-commands 
+	] redis-commands
 	write redis-port cmd
 ]
 
@@ -360,12 +389,12 @@ read-key: funct [
 	key			[any-string! any-word! any-path!]
 	/convert	"Convert data to Rebol type"
 ][
-	member: none 
+	member: none
 	if all [path? key 2 = length? key][
-		member: second key 
-		key: first key 
+		member: second key
+		key: first key
 	]
-	type: redis-type?/key redis-port key 
+	type: redis-type?/key redis-port key
 	post: none ; post process code
 	cmd: reduce/only case [
 		all [equal? type 'none none? key]					[ [KEYS '*] ]
@@ -373,15 +402,15 @@ read-key: funct [
 		equal? type 'string									[ [GET key] ]
 		all [equal? type 'list integer? member]				[ compose [LINDEX key (member - 1)] ]
 		equal? type 'list 									[ [LRANGE key 0 -1] ]
-		all [equal? type 'hash member]						[ [HGET key member] ]	
+		all [equal? type 'hash member]						[ [HGET key member] ]
 		equal? type 'hash									[ post: 'hash [HGETALL key] ]
 		all [equal? type 'set member]						[ post: 'set [SISMEMBER key member] ]
 		equal? type 'set									[ [SMEMBERS key] ]
 		all [equal? type 'zset integer? member]				[ [ZRANGEBYSCORE key member member] ]
-		all [equal? type 'zset pair? member]				[ [ZRANGEBYSCORE key member/1 member/2] ]				
+		all [equal? type 'zset pair? member]				[ [ZRANGEBYSCORE key member/1 member/2] ]
 		all [equal? type 'zset member]						[ post: 'score [ZSCORE key member] ]
 		equal? type 'zset									[ [ZRANGE key 0 -1] ]
-	] redis-commands 
+	] redis-commands
 	ret: either empty? cmd [none][
 		write redis-port cmd
 	]
@@ -392,42 +421,42 @@ read-key: funct [
 			set		[to logic! ret]
 			score	[load ret]
 		][
-			ret 
+			ret
 		]
 	]
 	ret
-] 
+]
 
 sys/make-scheme [
     name: 'redis
 	title: "Redis Protocol"
 	spec: make system/standard/port-spec-net [
-		port-id:		6379 
+		port-id:		6379
 		timeout:		0:05
 		pipeline-limit:	1
 		force-cmd?:		false
 		callback: none
 	]
-	
+
 	actor: [
-	
+
 		open?: func [
 			redis-port [port!]
 		] [
 			true? redis-port/state
         ]
-		
+
 		open: func [
 			redis-port [port!]
-			/local tcp-port 
+			/local tcp-port
 		][
 			if redis-port/state [return redis-port]
 			if none? redis-port/spec/host [make-redis-error "Missing host address"]
 			redis-port/state: context [
-				tcp-port:			none 
+				tcp-port:			none
 				pipeline-length:	0
 				key: if redis-port/spec/path [load next redis-port/spec/path]
-				index:				none 
+				index:				none
 			]
 			redis-port/state/tcp-port: tcp-port: make port! [
 				scheme: 'tcp
@@ -436,13 +465,13 @@ sys/make-scheme [
 				timeout: redis-port/spec/timeout
 				ref: rejoin [tcp:// host ":" port-id]
 				port-state: 'init
-				redis-data: none 
+				redis-data: none
 				locals: make binary! 10000
 				callback: :redis-port/spec/callback
 			]
-			tcp-port/awake: :awake-handler ;:redis-port/awake ;none 
-			open tcp-port 
-			redis-port 
+			tcp-port/awake: :awake-handler ;:redis-port/awake ;none
+			open tcp-port
+			redis-port
 		]
 
 		close: func [
@@ -453,12 +482,12 @@ sys/make-scheme [
 					read redis-port
 				][
 					close redis-port/state/tcp-port
-					redis-port/state: none 
-				]	
+					redis-port/state: none
+				]
 			]
-			redis-port 
+			redis-port
 		]
-		
+
 		read: func [
 			"Read from port"
 			redis-port [port!]
@@ -475,7 +504,7 @@ sys/make-scheme [
 			redis-port/state/pipeline-length: 0
 			also tcp-port/spec/redis-data close redis-port
 		]
-		
+
 		write: func [
 			"Write to pipeline"
 			redis-port [port!]
@@ -510,18 +539,18 @@ sys/make-scheme [
 					if redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [read redis-port]
 				]
 			]
-		]	
+		]
 
 		query: func [
 ;TODO: Add |FIELDS refinement
 			redis-port [port!]
-			/local key response 
+			/local key response
 		][
 			all [
-				key: redis-port/spec/path 
+				key: redis-port/spec/path
 				key: load next key
 				redis-port/spec/path: none
-			] 
+			]
 			case [
 				none? key [
 					parse-server-info write redis-port [INFO]
@@ -529,7 +558,7 @@ sys/make-scheme [
 				true [
 					type: redis-type?/key redis-port key
 					reduce/no-set [
-						name: key 
+						name: key
 						size: (
 							response: read-key/convert redis-port key
 							switch/default type [
@@ -537,15 +566,15 @@ sys/make-scheme [
 							][response]
 							; TODO: move this condition to SWITCH block above
 							either integer? response [ response ][ length? response ]
-						)	
+						)
 						date: (
 							response: parse-reply write redis-port [ TTL :key ]
 							switch/default response [
 								-1 [ none ]
 							][
-								local: now 
-								local/time: local/time + response 
-								local 
+								local: now
+								local/time: local/time + response
+								local
 							]
 						)
 						type: (type)
@@ -553,23 +582,23 @@ sys/make-scheme [
 				]
 			]
 		]
-		
+
 		delete: func [
 			redis-port [port!]
 			/local key member index type cmd
 		][
 			all [
-				key: redis-port/spec/path 
+				key: redis-port/spec/path
 				key: load next key
 				none? redis-port/spec/path: none
 				path? key
 				set [key member index] to block! key
 			]
-			type: redis-type?/key redis-port key 
+			type: redis-type?/key redis-port key
 			cmd: case [
 				none? key						[ [ FLUSHALL ] ]
-				all [word? member equal? type 'list][ 
-					[ LREM :key :index :member ] 
+				all [word? member equal? type 'list][
+					[ LREM :key :index :member ]
 				]
 				all [pair? member equal? type 'list][
 					[ LTRIM :key (to integer! member/1) (to integer! member/2) ]
@@ -583,10 +612,10 @@ sys/make-scheme [
 		]
 
 		rename: funct [
-			from 
-			to 
+			from
+			to
 		][
-			redis-port: from 
+			redis-port: from
 			from: last parse/all from/spec/path "/"
 			to: last parse/all to "/"
 			write redis-port [RENAME :from :to]
