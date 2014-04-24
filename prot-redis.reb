@@ -51,7 +51,6 @@ comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
 debug: none
 ;debug: :print
 
-
 flat-body-of: funct [
 	"Change all set-words to words"
 	object [object! map!]

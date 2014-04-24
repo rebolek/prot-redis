@@ -89,14 +89,16 @@ When the pipeline limit is reached, commands are send to the server.
 	>> write rs [SET foo 1]
 	>> write rs [INCR foo]
 
-**Write** has three modes of operations: basic, manual and automatic (see the pipelining modes).
+**Write** has three modes of operations: basic, manual and automatic 
+(see the pipelining modes).
 
 In *Basic mode* **write** returns server's response as **binary!**.
 
 In *Manual* and *Automatic* modes **write** returns pipeline length as **integer!**.
 
-In *Automatic* mode, when the pipeline limit is hit, pipelined commands are send to server, 
-**write** returns 0 and server's response is stored in **redis/data** (binary bulk data) and **redis/response** (parsed bulk data).
+In *Automatic* mode, when the pipeline limit is hit, pipelined commands are 
+send to server, **write** returns 0 and server's response is stored in 
+**redis/data** (binary bulk data) and **redis/response** (parsed bulk data).
 
 ### READ
 

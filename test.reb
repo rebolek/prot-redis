@@ -27,7 +27,7 @@ test-file: func [
 
 home: pwd
 
-print "===Test scheme"
+print "===Test scheme==="
 do %prot-redis.reb
 test-file %tests/test-scheme.reb %prot-redis.reb
 change-dir home

@@ -1,7 +1,7 @@
 REBOL[]
 
-rs: redis://192.168.211.10
-;rs: redis://127.0.0.1
+;rs: redis://192.168.211.10
+rs: redis://127.0.0.1
 
 do %../prot-redis.reb
 
