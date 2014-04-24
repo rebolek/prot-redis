@@ -28,8 +28,8 @@ test-file: func [
 home: pwd
 
 print "===Test scheme"
-do %prot-redis.r3
-test-file %tests/test-scheme.r3 %prot-redis.r3
+do %prot-redis.reb
+test-file %tests/test-scheme.reb %prot-redis.reb
 change-dir home
 
 halt 

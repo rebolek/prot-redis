@@ -4,6 +4,7 @@
 # Custom for Rebol
 *.r
 *.r3
+*.reb
 
 # Standard to msysgit
 *.doc	 diff=astextplain
