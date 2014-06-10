@@ -284,7 +284,7 @@ parse-dialect: funct [
 		|	change [
 				set key block! (
 					key: to string! map-each value key [
-						ajoin [get value #":"]
+						ajoin reduce [:value #":"]
 					]
 					take/last key
 				)
