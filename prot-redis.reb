@@ -1,9 +1,9 @@
 REBOL [
     Title: "Redis protocol"
     File: %prot-redis.reb
-    Date: 24-4-2014
+    Date: 10-6-2014
 	Created: 30-3-2013
-    Version: 0.3.1
+    Version: 0.3.2
     Author: "Boleslav Březovský"
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
@@ -31,6 +31,13 @@ REBOL [
 		}
 	]
 	Notes: [
+{
+Dialect description: 
+	GET-WORD! get value of word     >> x: 1 [:x]               == [1]
+	GET-PATH! get value of path     >> a: object [b: 1] [:a/b] == [2]
+	PAREN!    evaluate code         >> [(x + a/b)]             == [3]
+	BLOCK!    convert to redis key  >> [['x x]]                == ["x:1"]
+}
 	]
 	Bugs: [
 {
@@ -267,22 +274,27 @@ process-pipeline: func [
 ]
 
 parse-dialect: funct [
-	"Get value of get-word! and get-path! and evaluate paren!"
+	"Get value of get-word! and get-path!, evaluate paren! and process KEY blocks"
 	dialect [block!]
-	/local body key p
+	/local body key
 ][
 	parse body: copy/deep dialect [
 		any [
 			change [set key [get-word! | get-path!] (key: get key)] key
-;		|	change [set key paren! (key: do key)] key
-		|	p: set key paren! ( p/1: do key )
+		|	change [
+				set key block! (
+					key: to string! map-each value key [
+						ajoin [get value #":"]
+					]
+					take/last key
+				)
+			]	key
+		|	change [set key paren! (key: do key)] key
 		|	skip
 		]
 	]
 	body
 ]
-
-
 
 ;===AWAKE HANDLER
 
