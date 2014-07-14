@@ -196,6 +196,38 @@ parse-reply: func [
 	either single? ret [ret/1][ret]
 ]
 
+validate-reply: function [
+	data
+] [
+	~simple: [
+		[#"+" | #"-" | #":"]
+		thru crlf
+	]
+	~bulk-string: [
+		#"$"
+		copy size to crlf
+		(size: load size)
+		2 skip
+		size skip
+		crlf
+	]
+	~empty-string: [
+		"$-1" crlf
+	]
+	~array: [
+		#"*"
+		copy size to crlf
+		(size: load size)
+		2 skip
+		size ~content
+	]
+	~content: [
+		~simple | ~bulk-string | ~empty-string | ~array
+	]
+	parse data ~content
+]
+
+
 parse-server-info: funct [
 	"Parse return of INFO command"
 	data
@@ -309,17 +341,20 @@ awake-handler: funct [
 			open port
 		]
 		connect [
-			write port port/locals
+			write port take/part port/locals 32'000
 		]
 		wrote [
+
 			read port
 		]
 		read  [
-;			print ["^\read:" length? port/data]
-			port/spec/redis-data: copy port/data
-			if :port/spec/callback [port/spec/callback port]
-			clear port/data
-			return true
+			local: port/data
+			append port/spec/redis-data take/part local length? local
+			either validate-reply port/spec/redis-data [
+				return true	
+			] [
+				read port
+			]
 		]
 		close [
 			return true
@@ -510,6 +545,7 @@ sys/make-scheme [
 				return read-key redis-port redis-port/state/key
 			]
 			tcp-port: redis-port/state/tcp-port
+			tcp-port/spec/redis-data: make binary! 32'000
 			wait [tcp-port redis-port/spec/timeout]
 			clear tcp-port/locals
 			redis-port/state/pipeline-length: 0
