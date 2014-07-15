@@ -344,8 +344,11 @@ awake-handler: funct [
 			write port take/part port/locals 32'000
 		]
 		wrote [
-
-			read port
+			either empty? port/locals [
+				read port
+			] [
+				write port take/part port/locals 32'000
+			]
 		]
 		read  [
 			local: port/data
