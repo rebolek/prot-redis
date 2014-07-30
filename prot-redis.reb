@@ -222,7 +222,7 @@ validate-reply: function [
 		size ~content
 	]
 	~content: [
-		~simple | ~bulk-string | ~empty-string | ~array
+		~simple | ~empty-string | ~bulk-string | ~array
 	]
 	parse data ~content
 ]
@@ -344,6 +344,7 @@ awake-handler: funct [
 			write port take/part port/locals 32'000
 		]
 		wrote [
+			; DONE in loop to prevent problem described in CC #2160
 			either empty? port/locals [
 				read port
 			] [
@@ -353,7 +354,8 @@ awake-handler: funct [
 		read  [
 			local: port/data
 			append port/spec/redis-data take/part local length? local
-			either validate-reply port/spec/redis-data [
+			print to string! port/spec/redis-data
+			either validate-reply probe port/spec/redis-data [
 				return true	
 			] [
 				read port
