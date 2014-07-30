@@ -354,8 +354,7 @@ awake-handler: funct [
 		read  [
 			local: port/data
 			append port/spec/redis-data take/part local length? local
-			print to string! port/spec/redis-data
-			either validate-reply probe port/spec/redis-data [
+			either validate-reply port/spec/redis-data [
 				return true	
 			] [
 				read port

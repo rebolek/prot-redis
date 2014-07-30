@@ -17,3 +17,10 @@ Desktop.ini
 
 # Log files
 *.log
+
+#######################
+## Custom files
+#######################
+
+# rebol.r startup script
+rebol.r
