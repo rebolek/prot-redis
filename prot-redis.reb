@@ -141,9 +141,9 @@ parse-reply: func [
 	/binary	"Do not convert binary! to string!"
 	/local
 		message length status error integer bulk multi
-		msg ret
+		msg ret out
 ] [
-	ret: make block! min 1000 system/schemes/redis/spec/pipeline-limit
+	out: ret: make block! min 1000 system/schemes/redis/spec/pipeline-limit
 	message: [
 		copy msg to crlf (unless binary [msg: to string! msg])
 		crlf
@@ -185,15 +185,19 @@ parse-reply: func [
 		)
 	]
 	multi:		[
-		#"*" length (bulks: len)
-		bulks bulk
+		#"*" length (
+			bulks: len
+			append/only ret make block! 10
+			pos: tail ret
+			ret: last ret
+		)
+		bulks values (ret: pos)
 	]
+	values:  	[status | error | integer | no-data | bulk | multi]
 	parse data [
-		some [
-			status | error | integer | no-data | bulk | multi
-		]
+		some values
 	]
-	either single? ret [ret/1][ret]
+	either single? out [out/1][out]
 ]
 
 validate-reply: function [
@@ -587,7 +591,13 @@ sys/make-scheme [
 					read redis-port
 				]
 				true [
-					if redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [read redis-port]
+					either redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [
+;						print mold to string! tcp-port/locals
+;						print "now reading from server"
+						read redis-port
+					] [
+						redis-port/state/pipeline-length
+					]
 				]
 			]
 		]
