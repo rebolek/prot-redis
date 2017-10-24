@@ -144,7 +144,7 @@ You can decode the data with **parse-response** function.
 	>> query redis://192.168.1.1
 	>> query redis://192.168.1.1/foo
 	
-Return informations about key as object!.
+Return informations about key as `object!`.
 
 	name -> key name
 	size -> key size (length of string or number of members)
@@ -168,19 +168,19 @@ Delete first member in list:
 
 	>> delete redis://192.168.1.1/foo/1
 
-###CLOSE
+### CLOSE
 
 Close port.
 
-###CREATE
+### CREATE
 
 No information yet.
 
-###RENAME
+### RENAME
 
 No information yet.
 
-###UPDATE
+### UPDATE
 
 No information yet.
 
@@ -190,7 +190,7 @@ No information yet.
 Redis dialect uses **Redis** commands. 
 See the list of commands [here](http://redis.io/commands).
 Commands are followed by values.
-Get-word! and get-path! can be used to get word or path value.
+`get-word!` and `get-path!` can be used to get word or path value.
 Paren! evaluates **Rebol** code.
 All other datatypes are passed as-is.
 For example, `SET foo bar` is same as `SET "foo" "bar"`.
@@ -211,7 +211,7 @@ For example, `SET foo bar` is same as `SET "foo" "bar"`.
 	>> write port [SET key (1 + 1)]
 	;; key: 2
 
-####Why aren't word!s and path!s evaluated?
+#### Why aren't word!s and path!s evaluated?
 
 **Word!**s and **path!**s are not evaluated, to get their values 
 you need to use **get-word!** or **get-path!** notation. 
