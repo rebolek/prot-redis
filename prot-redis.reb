@@ -50,7 +50,7 @@ Dialect description:
 	]
 	Type: 'module
 	Name: 'prot-redis
-	Exports: [send-redis write-key read-key]
+	Exports: [send-redis write-key read-key load-resp]
 	Options: [isolate]
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
@@ -133,10 +133,10 @@ send-redis: func [
 	/local
 ] [
 	local: write port data
-	apply :parse-reply [ local binary ]
+	apply :load-resp [ local binary ]
 ]
 
-parse-reply: func [
+load-resp: func [
 	data
 	/binary	"Do not convert binary! to string!"
 	/local
@@ -283,7 +283,7 @@ redis-type?: funct [
 ][
 	unless key [name: get-key redis-port ]
 	if name [
-		to lit-word! parse-reply write redis-port [ TYPE :name ]
+		to lit-word! load-resp write redis-port [ TYPE :name ]
 	]
 ]
 
@@ -468,7 +468,7 @@ read-key: funct [
 		write redis-port cmd
 	]
 	if all [ret convert] [
-		ret: parse-reply ret
+		ret: load-resp ret
 		ret: switch/default post [
 			hash	[map ret]
 			set		[to logic! ret]
@@ -545,7 +545,7 @@ sys/make-scheme [
 		read: func [
 			"Read from port"
 			redis-port [port!]
-			/local key tcp-port
+			/local tcp-port
 		][
 			all [
 				redis-port/spec/path
@@ -605,7 +605,7 @@ sys/make-scheme [
 		query: func [
 ;TODO: Add /FIELDS refinement
 			redis-port [port!]
-			/local key response
+			/local key type response
 		][
 			all [
 				key: redis-port/spec/path
@@ -629,7 +629,7 @@ sys/make-scheme [
 							either integer? response [ response ][ length? response ]
 						)
 						date: (
-							response: parse-reply write redis-port [ TTL :key ]
+							response: load-resp write redis-port [ TTL :key ]
 							switch/default response [
 								-1 [ none ]
 							][
@@ -669,7 +669,7 @@ sys/make-scheme [
 				all [member equal? type 'zset]	[ [ ZREM :key :member ] ]
 				true							[ [ DEL :key ] ]
 			]
-			parse-reply write redis-port cmd
+			load-resp write redis-port cmd
 		]
 
 		rename: func [
