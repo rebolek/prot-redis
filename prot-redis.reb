@@ -1,9 +1,9 @@
 REBOL [
     Title: "Redis protocol"
     File: %prot-redis.reb
-    Date: 10-6-2014
+    Date: 27-04-2023
 	Created: 30-3-2013
-    Version: 0.3.2
+    Version: 0.3.3
     Author: "Boleslav Březovský"
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
@@ -484,11 +484,11 @@ sys/make-scheme [
     name: 'redis
 	title: "Redis Protocol"
 	spec: make system/standard/port-spec-net [
-		port:		6379
-		timeout:		0:05
-		pipeline-limit:	1
-		force-cmd?:		false
-		callback: none
+		port:           6379
+		timeout:        0:05
+		pipeline-limit: 1
+		force-cmd?:     false
+		callback:       none
 	]
 
 	actor: [
@@ -508,7 +508,8 @@ sys/make-scheme [
 			redis-port/state: context [
 				tcp-port:			none
 				pipeline-length:	0
-				key: if redis-port/spec/path [load next redis-port/spec/path]
+;				key: if redis-port/spec/path [load next redis-port/spec/path]
+				key: redis-port/spec/target
 				index:				none
 			]
 			redis-port/state/tcp-port: tcp-port: make port! [
@@ -602,7 +603,7 @@ sys/make-scheme [
 		]
 
 		query: func [
-;TODO: Add |FIELDS refinement
+;TODO: Add /FIELDS refinement
 			redis-port [port!]
 			/local key response
 		][
@@ -671,18 +672,15 @@ sys/make-scheme [
 			parse-reply write redis-port cmd
 		]
 
-	]
-]
-
-comment [
-		rename: funct [
+		rename: func [
 			from
-			to
+			target
+			/local redis-port
 		][
 			redis-port: from
-			from: last parse/all from/spec/path "/"
-			to: last parse/all to "/"
-			write redis-port [RENAME :from :to]
+			from: last parse from/spec/path "/"
+			target: last parse target "/"
+			write redis-port [RENAME :from :target]
 		]
-
+	]
 ]
