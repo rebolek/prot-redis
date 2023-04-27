@@ -305,7 +305,7 @@ process-pipeline: func [
 ][
 	tcp-port: redis-port/state/tcp-port
 	wait [tcp-port redis-port/spec/timeout]
-	clear tcp-port/locals
+	clear tcp-port/extra
 	tcp-port/spec/redis-data
 ]
 
@@ -345,14 +345,14 @@ awake-handler: funct [
 			open port
 		]
 		connect [
-			write port take/part port/locals 32'000
+			write port take/part port/extra 32'000
 		]
 		wrote [
 			; DONE in loop to prevent problem described in CC #2160
-			either empty? port/locals [
+			either empty? port/extra [
 				read port
 			] [
-				write port take/part port/locals 32'000
+				write port take/part port/extra 32'000
 			]
 		]
 		read  [
@@ -387,7 +387,6 @@ set-callback: func [
 		port/state/tcp-port/spec/callback: :callback
 	]
 ]
-
 
 redis-commands: [
 	append auth bgrewriteaof bgsave bitcount bitop blpop brpop brpoplpush
@@ -485,7 +484,7 @@ sys/make-scheme [
     name: 'redis
 	title: "Redis Protocol"
 	spec: make system/standard/port-spec-net [
-		port-id:		6379
+		port:		6379
 		timeout:		0:05
 		pipeline-limit:	1
 		force-cmd?:		false
@@ -515,12 +514,12 @@ sys/make-scheme [
 			redis-port/state/tcp-port: tcp-port: make port! [
 				scheme: 'tcp
 				host: redis-port/spec/host
-				port-id: redis-port/spec/port-id
+				port: redis-port/spec/port
 				timeout: redis-port/spec/timeout
-				ref: rejoin [tcp:// host ":" port-id]
+				ref: rejoin [tcp:// host ":" port]
 				port-state: 'init
 				redis-data: none
-				locals: make binary! 10000
+				extra: make binary! 10000
 				callback: :redis-port/spec/callback
 			]
 			tcp-port/awake: :awake-handler ;:redis-port/awake ;none
@@ -555,7 +554,7 @@ sys/make-scheme [
 			tcp-port: redis-port/state/tcp-port
 			tcp-port/spec/redis-data: make binary! 32'000
 			wait [tcp-port redis-port/spec/timeout]
-			clear tcp-port/locals
+			clear tcp-port/extra
 			redis-port/state/pipeline-length: 0
 			also tcp-port/spec/redis-data close redis-port
 		]
@@ -572,12 +571,12 @@ sys/make-scheme [
 			]
 			redis-port/spec/path: none
 			tcp-port: redis-port/state/tcp-port
-			if none? tcp-port/locals [
+			if none? tcp-port/extra [
 				; Init pipeline buffer (100 bytes for each command in automatic or basic mode, 1 000 000 bytes for manual mode
 				size: either zero? redis-port/spec/pipeline-limit [1'000'000][100 * redis-port/spec/pipeline-limit]
-				tcp-port/locals: make binary! size
+				tcp-port/extra: make binary! size
 			]
-			append tcp-port/locals make-bulk-request parse-dialect data
+			append tcp-port/extra make-bulk-request parse-dialect data
 			redis-port/state/pipeline-length: redis-port/state/pipeline-length + 1
 			case [
 				zero? redis-port/spec/pipeline-limit [
@@ -592,7 +591,7 @@ sys/make-scheme [
 				]
 				true [
 					either redis-port/state/pipeline-length = redis-port/spec/pipeline-limit [
-;						print mold to string! tcp-port/locals
+;						print mold to string! tcp-port/extra
 ;						print "now reading from server"
 						read redis-port
 					] [
@@ -672,6 +671,10 @@ sys/make-scheme [
 			parse-reply write redis-port cmd
 		]
 
+	]
+]
+
+comment [
 		rename: funct [
 			from
 			to
@@ -681,5 +684,5 @@ sys/make-scheme [
 			to: last parse/all to "/"
 			write redis-port [RENAME :from :to]
 		]
-	]
+
 ]
