@@ -5,6 +5,10 @@ REBOL [
 	Created: 30-3-2013
     Version: 0.3.3
     Author: "Boleslav Březovský"
+	Type: module
+	Name: prot-redis
+	Exports: [send-redis write-key read-key load-resp]
+	Options: [isolate]
 ;    Checksum: #{FB5370E73C55EF3C16FB73342E6F7ACFF98EFE97}
 	To-Do: [
 		{Sharding:
@@ -48,10 +52,6 @@ Dialect description:
 ** Access error: protocol error: "ERR wrong number of arguments for 'hget' command"
 }
 	]
-	Type: 'module
-	Name: 'prot-redis
-	Exports: [send-redis write-key read-key load-resp]
-	Options: [isolate]
 ]
 comment {File redis.r3 created by PROM on 30-Mar-2013/8:55:56+1:00}
 
@@ -366,6 +366,10 @@ awake-handler: funct [
 		]
 		close [
 			return true
+		]
+		error [
+			print "BB:TODO:error event"
+			return false
 		]
 	] [
 		print ["Unexpected event:" event/type]
